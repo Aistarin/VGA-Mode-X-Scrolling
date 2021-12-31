@@ -162,10 +162,7 @@ int main(){
         i = (172 * COSX[(int) k]) / 256;
         j = (172 * SINEY[(int) k]) / 256;
 
-        // i = (16 * k) / 256;
-        // j = (16 * k) / 256;
-
-        // vga_scroll_offset(64 + i, j);
+        vga_scroll_offset(64 + i, 256 + j);
 
         // vga_scroll_offset(0, 0);
 
@@ -187,11 +184,11 @@ int main(){
             // }
         }
 
-        if (k % 2 == 0) {
-            vga_blit_vram_to_vram(0, PAGE_HEIGHT, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
-        } else {
-            vga_blit_vram_to_vram(0, PAGE_HEIGHT * 2, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
-        }
+        // if (k % 2 == 0) {
+        //     vga_blit_vram_to_vram(0, PAGE_HEIGHT, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+        // } else {
+        //     vga_blit_vram_to_vram(0, PAGE_HEIGHT * 2, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+        // }
     }
     vga_exit_modex();
 
