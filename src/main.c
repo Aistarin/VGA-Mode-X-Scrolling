@@ -140,7 +140,6 @@ int scroll_image() {
         // it can be ready for us when we are ready to page flip
         if(abs_y_offset % 16 == 0) {
             vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, vrt_y_offset + SCREEN_HEIGHT, 0, abs_y_offset + SCREEN_HEIGHT, PAGE_WIDTH, 16);
-            // copy the row we just drew back to the row we just scrolled off of
             if (abs_y_offset != 0) vga_blit_vram_to_vram(0, abs_y_offset + SCREEN_HEIGHT - 16, 0, abs_y_offset - 16, PAGE_WIDTH, 16);
         };
 
