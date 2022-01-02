@@ -33,7 +33,7 @@
 #define SCREEN_WIDTH    320     // Visibile width
 #define SCREEN_HEIGHT   240     // Visibile height
 #define PAGE_WIDTH      320     // Drawable width
-#define PAGE_HEIGHT     272     // Drawable height
+#define PAGE_HEIGHT     480     // Drawable height
 
 /* macro to write a word to a port */
 #define word_out(port,register,value) outpw(port,(((word)value<<8) + register))
