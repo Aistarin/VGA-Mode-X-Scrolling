@@ -123,39 +123,42 @@ int scroll_image() {
     word vrt_y_offset = 0;
     byte *image_buffer = malloc(sizeof(byte) * 320 * 960);
     byte palette[256*3];
-    int bounce = 1;
 
     vga_init_modex();
-    load_bmp_to_buffer("test.bmp", image_buffer, 320, 960, palette);
+    load_bmp_to_buffer("magfest.bmp", image_buffer, 320, 960, palette);
 
     // TODO: palette fade in effects
     vga_set_palette(palette);
 
-    vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT + 16);
+    vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
     vga_scroll_offset(0, 0);
 
     while (!_kbhit()){
-        if (bounce) {
-            vga_scroll_offset(0, abs_y_offset);
-            // populate row that we just scrolled off of with the new one so that
-            // it can be ready for us when we are ready to page flip
-            if(abs_y_offset % 16 == 0) {
-                vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, vrt_y_offset + SCREEN_HEIGHT, 0, abs_y_offset + SCREEN_HEIGHT, PAGE_WIDTH, 16);
-                if (abs_y_offset != 0) vga_blit_vram_to_vram(0, abs_y_offset + SCREEN_HEIGHT - 16, 0, abs_y_offset - 16, PAGE_WIDTH, 16);
-            };
+        vga_scroll_offset(0, abs_y_offset);
+        // populate row that we just scrolled off of with the new one so that
+        // it can be ready for us when we are ready to page flip
+        if(abs_y_offset % 16 == 0) {
+            vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, vrt_y_offset + SCREEN_HEIGHT, 0, abs_y_offset + SCREEN_HEIGHT, PAGE_WIDTH, 16);
+            // copy the row we just drew back to the row we just scrolled off of
+            if (abs_y_offset != 0) vga_blit_vram_to_vram(0, abs_y_offset + SCREEN_HEIGHT - 16, 0, abs_y_offset - 16, PAGE_WIDTH, 16);
+        };
 
-            abs_y_offset++;
-            vrt_y_offset++;
-        }
+        abs_y_offset++;
+        vrt_y_offset++;
 
         if(abs_y_offset == SCREEN_HEIGHT) {
+            // once we reach the bottom of the visible page, we have to
+            // manually copy the last row up before we flip back
             vga_blit_vram_to_vram(0, (SCREEN_HEIGHT * 2 ) - 16, 0, SCREEN_HEIGHT - 16, PAGE_WIDTH, 16);
             abs_y_offset = 0;
         }
 
         if(vrt_y_offset == 720) {
-            vrt_y_offset = 0;
-            bounce = 0;
+            // set the virtual y offset to negative screen height so that
+            // the modulo logic will begin copying the rows starting from
+            // the beginning
+            vrt_y_offset = SCREEN_HEIGHT * -1;
         }
     }
     vga_exit_modex();
