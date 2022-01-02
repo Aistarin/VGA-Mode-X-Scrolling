@@ -13,8 +13,6 @@
 unsigned int COSX[256];
 unsigned int SINEY[256];
 
-byte palette[256*3];
-
 void init_sin()
 {
   int i;
@@ -67,7 +65,7 @@ void fskip(FILE *fp, int num_bytes)
       fgetc(fp);
 }
 
-void load_bmp_to_buffer(char *file, byte *screen_buffer)
+void load_bmp_to_buffer(char *file, byte *screen_buffer, word buffer_width, word buffer_height, byte *palette)
 {
     FILE *fp;
     long index;
@@ -111,16 +109,45 @@ void load_bmp_to_buffer(char *file, byte *screen_buffer)
         x=fgetc(fp);
     }
 
-    for(index = (long) PAGE_HEIGHT; index > 0; index--) {
-        for(x = 0; x < (int) PAGE_WIDTH; x++) {
-            screen_buffer[PAGE_WIDTH * index + x] = (byte)fgetc(fp);
+    for(index = (long) buffer_height; index > 0; index--) {
+        for(x = 0; x < (int) buffer_width; x++) {
+            screen_buffer[buffer_width * index + x] = (byte)fgetc(fp);
         }
     }
 
     fclose(fp);
 }
 
-int main(){
+int scroll_image() {
+    int abs_y_offset = 0;
+    int vrt_y_offset = PAGE_HEIGHT;
+    byte *image_buffer = malloc(sizeof(byte) * 320 * 960);
+    byte palette[256*3];
+
+    vga_init_modex();
+    load_bmp_to_buffer("test.bmp", image_buffer, 320, 960, palette);
+
+    // TODO: palette fade in effects
+    vga_set_palette(palette);
+
+    vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, 0, 0, 0, 128, 128);
+    vga_scroll_offset(0, 0);
+
+    while (!_kbhit()){
+        // vga_scroll_offset(0, abs_y_offset++);
+
+        // if(abs_y_offset % 16 == 0) {
+        //     vga_draw_buffer(image_buffer, PAGE_WIDTH, 16, abs_y_offset - 16);
+        // };
+    }
+    vga_exit_modex();
+
+    free(image_buffer);
+
+    return 0;
+}
+
+int test_pattern_routine(){
     word i, j, k;
     word bounce = 1;
     byte color = 0;
@@ -197,4 +224,8 @@ int main(){
     free(screen_buffer_2);
 
     return 0;
+}
+
+int main() {
+    return scroll_image();
 }

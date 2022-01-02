@@ -119,6 +119,30 @@ void vga_draw_buffer(byte * buffer, word width, word height, word initial_offset
     }
 }
 
+void vga_blit_buffer_to_vram(byte * buffer, word buffer_width, word buffer_height, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
+    byte plane;
+    word x, y;
+    dword offset;
+
+    for(plane = 0; plane < 4; plane++) {
+        // select the plane bit
+        outp(SC_INDEX, MAP_MASK);
+        outp(SC_DATA, 1 << plane);
+
+        for(y = 0; y < height; y++) {
+            for(x = plane; x < width; x += 4) {
+                // TODO: this could probably be reimplemented to be
+                // much cache-friendlier by having/assuming that the
+                // data in the buffer is already sorted by plane,
+                // that way we could just use memcpy to copy an
+                // entire plane's worth of data to VRAM in one go
+                offset = ((dword) (dest_y + y) * PAGE_WIDTH + (dest_x + x)) >> 2;
+                VGA[(word)offset]=buffer[buffer_width * (source_y + y) + (source_x + x)];
+            }
+        }
+    }
+}
+
 //wait for the VGA to stop drawing, and set scroll and Pel panning
 void vga_scroll_offset(word offset_x, word offset_y)
 {
