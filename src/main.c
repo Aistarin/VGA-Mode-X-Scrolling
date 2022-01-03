@@ -5,6 +5,7 @@
 #include <conio.h>
 #include <dos.h>
 #include <math.h>
+#include <string.h>
 
 #ifndef M_PI
 #define M_PI 3.14159
@@ -123,11 +124,12 @@ int scroll_image() {
     word vrt_y_offset = 0;
     byte *image_buffer = malloc(sizeof(byte) * 320 * 960);
     byte palette[256*3];
+    byte temp_col[3];
+    byte colors_to_cycle[4] = {60, 96, 101, 108};
 
     vga_init_modex();
     load_bmp_to_buffer("magfest.bmp", image_buffer, 320, 960, palette);
 
-    // TODO: palette fade in effects
     vga_set_palette(palette);
 
     vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -135,12 +137,22 @@ int scroll_image() {
     vga_scroll_offset(0, 0);
 
     while (!_kbhit()){
+        vga_set_palette(palette);
+        // this waits for a retrace before setting the offset
         vga_scroll_offset(0, abs_y_offset);
+
         // populate row that we just scrolled off of with the new one so that
         // it can be ready for us when we are ready to page flip
         if(abs_y_offset % 16 == 0) {
             vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, vrt_y_offset + SCREEN_HEIGHT, 0, abs_y_offset + SCREEN_HEIGHT, PAGE_WIDTH, 16);
             if (abs_y_offset != 0) vga_blit_vram_to_vram(0, abs_y_offset + SCREEN_HEIGHT - 16, 0, abs_y_offset - 16, PAGE_WIDTH, 16);
+
+            // cycle colors
+            memcpy(temp_col, &palette[108 * 3], sizeof(byte) * 3);
+            memcpy(&palette[108 * 3], &palette[101 * 3], sizeof(byte) * 3);
+            memcpy(&palette[101 * 3], &palette[96 * 3], sizeof(byte) * 3);
+            memcpy(&palette[96 * 3], &palette[60 * 3], sizeof(byte) * 3);
+            memcpy(&palette[60 * 3], temp_col, sizeof(byte) * 3);
         };
 
         abs_y_offset++;
@@ -158,11 +170,12 @@ int scroll_image() {
             // the modulo logic will begin copying the rows starting from
             // the beginning
             vrt_y_offset = SCREEN_HEIGHT * -1;
-        }
+        }        
     }
     vga_exit_modex();
 
     free(image_buffer);
+    free(palette);
 
     return 0;
 }
