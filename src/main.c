@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "gfx.h"
 #include "common.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -130,14 +131,14 @@ int scroll_image() {
     vga_init_modex();
     load_bmp_to_buffer("magfest.bmp", image_buffer, 320, 960, palette);
 
-    vga_set_palette(palette);
+    vga_set_palette(palette, 0, 255);
 
     vga_blit_buffer_to_vram(image_buffer, 320, 960, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     vga_scroll_offset(0, 0);
 
     while (!_kbhit()){
-        vga_set_palette(palette);
+        vga_set_palette(palette, 0, 255);
         // this waits for a retrace before setting the offset
         vga_scroll_offset(0, abs_y_offset);
 
@@ -202,7 +203,7 @@ int test_pattern_routine(){
     vga_scroll_offset(0, 0);
 
     // load_bmp_to_buffer("jodiflpy.bmp", screen_buffer_1);
-    // vga_set_palette(palette);
+    // vga_set_palette(palette, 0, 255);
 
     // vga_draw_buffer(screen_buffer_1, PAGE_WIDTH, PAGE_HEIGHT, 0);
     // vga_draw_buffer(screen_buffer_2, PAGE_WIDTH, PAGE_HEIGHT, PAGE_HEIGHT);
@@ -259,6 +260,36 @@ int test_pattern_routine(){
     return 0;
 }
 
+int test_tile_routine(){
+    word i, j, k;
+    word bounce = 1;
+    byte color = 0;
+
+    gfx_buffer_8bit *screen_buffer = gfx_create_empty_buffer_8bit(PAGE_WIDTH, PAGE_HEIGHT);
+    gfx_buffer_8bit *tile_buffer = gfx_create_empty_buffer_8bit(128, 128);
+
+    init_sin();
+    render_pattern_to_buffer_2(screen_buffer->buffer, PAGE_WIDTH, PAGE_HEIGHT);
+    render_pattern_to_buffer_1(tile_buffer->buffer, 128, 128);
+
+    gfx_init_video();
+
+    //vga_blit_buffer_to_vram(tile_buffer->buffer, 256, 256, 0, 0, 32, 32, 256, 256);
+    gfx_blit_buffer_to_active_page(screen_buffer, 0, 0);
+    gfx_blit_buffer_to_active_page(tile_buffer, 32, 32);
+
+    while (!_kbhit()){
+        vga_scroll_offset(0, 0);
+    }
+
+    vga_exit_modex();
+
+    free(tile_buffer);
+    free(screen_buffer);
+
+    return 0;
+}
+
 int main() {
-    return scroll_image();
+    return test_tile_routine();
 }

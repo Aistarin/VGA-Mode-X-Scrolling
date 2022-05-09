@@ -75,12 +75,14 @@ void vga_exit_modex(){
     vga_set_mode(0x03);
 }
 
-void vga_set_palette(byte *palette)
-{
+void vga_set_palette(byte *palette, byte start_index, byte end_index) {
     int i;
+
     outp(PALETTE_INDEX,0);
-    for(i=0;i<256*3;i++)
-        outp(PALETTE_DATA,palette[i]);
+
+    for(i = 0; i < 256*3; i++) {
+        outp(PALETTE_DATA, palette[i]);
+    }
 }
 
 void vga_draw_pixel(word x, word y, byte color){
@@ -180,15 +182,33 @@ void vga_blit_vram_to_vram(word source_x, word source_y, word dest_x, word dest_
     dword dest_offset = (((dword)dest_y * (dword)PAGE_WIDTH + dest_x) >> 2);
     int line, x;
 
-    outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK); //select all planes
-    outpw(GC_INDEX, 0x08);                          //set to or mode
+    outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK);      //select all planes
+    outpw(GC_INDEX, 0x08);                              //set to or mode
 
     for(line = 0; line < height; line++) {
         for(x = 0; x < width >> 2; x++) {
-            pixel = VGA[source_offset + x]; //read pixel to load the latches
-            VGA[dest_offset + x] = 0;                  //write four pixels
+            pixel = VGA[source_offset + x];             //read pixel to load the latches
+            VGA[dest_offset + x] = 0;                   //write four pixels
         }
         source_offset += PAGE_WIDTH >> 2;
+        dest_offset += PAGE_WIDTH >> 2;
+    }
+
+    outpw(GC_INDEX + 1, 0x0ff);
+}
+
+
+void vga_fill_vram_with_color(byte color, word dest_x, word dest_y, word width, word height) {
+    dword dest_offset = (((dword)dest_y * (dword)PAGE_WIDTH + dest_x) >> 2);
+    int line, x;
+
+    outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK);      //select all planes
+    outpw(GC_INDEX, 0x08);                              //set to or mode
+
+    for(line = 0; line < height; line++) {
+        for(x = 0; x < width >> 2; x++) {
+            VGA[dest_offset + x] = color;                   //write four pixels
+        }
         dest_offset += PAGE_WIDTH >> 2;
     }
 

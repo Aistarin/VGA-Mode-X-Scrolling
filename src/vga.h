@@ -1,3 +1,6 @@
+#ifndef VGA_H_
+#define VGA_H_
+
 #include "common.h"
 #include <conio.h>
 #include <i86.h>
@@ -32,8 +35,8 @@
 
 #define SCREEN_WIDTH    320     // Visibile width
 #define SCREEN_HEIGHT   240     // Visibile height
-#define PAGE_WIDTH      320     // Drawable width
-#define PAGE_HEIGHT     480     // Drawable height
+#define PAGE_WIDTH      336     // Drawable width
+#define PAGE_HEIGHT     256     // Drawable height
 
 /* macro to write a word to a port */
 #define word_out(port,register,value) outpw(port,(((word)value<<8) + register))
@@ -41,10 +44,13 @@
 void vga_init_modex();
 void vga_exit_modex();
 void vga_set_mode(byte mode);
-void vga_set_palette(byte *palette);
+void vga_set_palette(byte *palette, byte start_index, byte end_index);
 void vga_draw_pixel(word x, word y, byte color);
 void vga_draw_buffer(byte * buffer, word width, word height, word initial_offset);
 void vga_wait_for_retrace();
 void vga_scroll_offset(word offset_x, word offset_y);
 void vga_blit_vram_to_vram(word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 void vga_blit_buffer_to_vram(byte * buffer, word buffer_width, word buffer_height, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
+void vga_fill_vram_with_color(byte color, word dest_x, word dest_y, word width, word height);
+
+#endif
