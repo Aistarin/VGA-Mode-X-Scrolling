@@ -31,8 +31,6 @@
 
 #define AC_INDEX        0x03c0  // Attribute controller index
 
-#define TILE_SIZE       16      // Size of tiles
-
 #define SCREEN_WIDTH    320     // Visibile width
 #define SCREEN_HEIGHT   240     // Visibile height
 #define PAGE_WIDTH      336     // Drawable width

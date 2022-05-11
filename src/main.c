@@ -29,7 +29,7 @@ void render_pattern_to_buffer_1(byte *screen_buffer, word width, word height) {
 
     for(j = 0; j < height; j++) {
         for(i = 0; i < width; i++) {
-            if (!(j % TILE_SIZE && i % TILE_SIZE)) color = 0x40 + (((40 * (i + j)) / (height + width)));
+            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x40 + (((40 * (i + j)) / (height + width)));
             else color = 0x10 + (((16 * (i + j)) / (height + width)));
             // else color = 0;
             screen_buffer[width * j + i] = color;
@@ -42,7 +42,7 @@ void render_pattern_to_buffer_2(byte *screen_buffer, word width, word height) {
 
     for(j = 0; j < height; j++) {
         for(i = 0; i < width; i++) {
-            if (!(j % TILE_SIZE && i % TILE_SIZE)) color = 0x10 + (((16 * (i + j)) / (height + width)));
+            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x10 + (((16 * (i + j)) / (height + width)));
             else color = 0x40 + (((40 * (i + j)) / (height + width)));
             // else color = 0;
             screen_buffer[width * j + i] = color;
@@ -264,19 +264,22 @@ int test_tile_routine(){
     word i, j, k;
     word bounce = 1;
     byte color = 0;
-
-    gfx_buffer_8bit *screen_buffer = gfx_create_empty_buffer_8bit(PAGE_WIDTH, PAGE_HEIGHT);
-    gfx_buffer_8bit *tile_buffer = gfx_create_empty_buffer_8bit(128, 128);
+    byte *screen_buffer;
 
     init_sin();
-    render_pattern_to_buffer_2(screen_buffer->buffer, PAGE_WIDTH, PAGE_HEIGHT);
-    render_pattern_to_buffer_1(tile_buffer->buffer, 128, 128);
+
+    // gfx_buffer_8bit *screen_buffer = gfx_create_empty_buffer_8bit(PAGE_WIDTH, PAGE_HEIGHT);
+    // gfx_buffer_8bit *tile_buffer = gfx_create_empty_buffer_8bit(128, 128);
+    // render_pattern_to_buffer_2(screen_buffer->buffer, PAGE_WIDTH, PAGE_HEIGHT);
+    // render_pattern_to_buffer_1(tile_buffer->buffer, 128, 128);
 
     gfx_init_video();
 
-    //vga_blit_buffer_to_vram(tile_buffer->buffer, 256, 256, 0, 0, 32, 32, 256, 256);
-    gfx_blit_buffer_to_active_page(screen_buffer, 0, 0);
-    gfx_blit_buffer_to_active_page(tile_buffer, 32, 32);
+    screen_buffer = gfx_get_screen_buffer();
+
+    render_pattern_to_buffer_2(screen_buffer, PAGE_WIDTH, PAGE_HEIGHT);
+
+    _gfx_blit_buffer();
 
     while (!_kbhit()){
         vga_scroll_offset(0, 0);
@@ -284,8 +287,8 @@ int test_tile_routine(){
 
     vga_exit_modex();
 
-    free(tile_buffer);
-    free(screen_buffer);
+    // free(tile_buffer);
+    // free(screen_buffer);
 
     return 0;
 }
