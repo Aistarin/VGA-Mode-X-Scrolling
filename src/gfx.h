@@ -43,6 +43,8 @@ void gfx_blit_buffer_to_active_page(gfx_buffer_8bit* buffer, word dest_x, word d
 
 byte* gfx_get_screen_buffer();
 
-void _gfx_blit_buffer();
+void gfx_blit_screen_buffer();
+
+void gfx_render_all();
 
 #endif

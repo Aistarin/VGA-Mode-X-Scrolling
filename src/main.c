@@ -50,7 +50,6 @@ void render_pattern_to_buffer_2(byte *screen_buffer, word width, word height) {
     }
 }
 
-
 void render_buffer_to_vram_slow(byte *screen_buffer) {
     word i, j;
     for(j = 0; j < PAGE_HEIGHT; j++) {
@@ -277,12 +276,17 @@ int test_tile_routine(){
 
     screen_buffer = gfx_get_screen_buffer();
 
-    render_pattern_to_buffer_2(screen_buffer, PAGE_WIDTH, PAGE_HEIGHT);
+    render_pattern_to_buffer_1(screen_buffer, PAGE_WIDTH, PAGE_HEIGHT);
+    gfx_blit_screen_buffer();
+    gfx_render_all();
 
-    _gfx_blit_buffer();
+    render_pattern_to_buffer_1(screen_buffer, PAGE_WIDTH, PAGE_HEIGHT);
+    gfx_blit_screen_buffer();
+    gfx_render_all();
 
+    // main program loop
     while (!_kbhit()){
-        vga_scroll_offset(0, 0);
+        gfx_render_all();
     }
 
     vga_exit_modex();
