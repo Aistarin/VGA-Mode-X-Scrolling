@@ -36,18 +36,16 @@ void gfx_init_video() {
 }
 
 struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
-    int buffer_size;
+    int buffer_size = (int) width * (int) height;
     struct gfx_buffer_8bit* empty_buffer;
 
-    buffer_size = ((int) width * (int) height) * sizeof(byte);
-
-    /* takes into account buffer array of length 1 */
-    empty_buffer = malloc(sizeof(gfx_buffer_8bit) + buffer_size - 1);
+    empty_buffer = malloc(sizeof(gfx_buffer_8bit));
 
     empty_buffer->buffer_size = buffer_size;
     empty_buffer->is_planar = 0;
     empty_buffer->width = width;
     empty_buffer->height = height;
+    empty_buffer->buffer = malloc(sizeof(byte) * buffer_size);
 
     return empty_buffer;
 }

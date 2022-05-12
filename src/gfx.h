@@ -19,7 +19,7 @@ typedef struct gfx_buffer_8bit {
     byte is_planar;                         // flag to determine whether or not buffer is stored in planar format
     word width;                             // buffer width (in pixels)
     word height;                            // buffer height (in pixels)
-    byte buffer[1];                         // array of bytes that holds raw bitmap data
+    byte *buffer;                           // array of bytes that holds raw bitmap data
 } gfx_buffer_8bit;
 
 typedef struct gfx_tile_screen {
@@ -27,8 +27,8 @@ typedef struct gfx_tile_screen {
     byte tile_height;                       // tile height (in pixels)
     byte tile_count_horz;                   // number of horizontal tiles
     byte tile_count_vert;                   // number of vertical tiles
-    byte tilemap[1];                        // tile indexes currently on screen
-    byte tilestate[1];                      // bitmap of current tile states
+    byte *tilemap;                          // tile indexes currently on screen
+    byte *tilestate;                        // bitmap of current tile states
 } gfx_tile_screen;
 
 typedef struct gfx_draw_command {

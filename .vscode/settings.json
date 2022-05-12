@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "stdio.h": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "cstddef": "c"
     }
 }
