@@ -25,18 +25,19 @@ gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be dra
 word gfx_command_count;                 // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
 
-/* TODO: refactor to ensure memory is allocated contiguously */
 struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
     struct gfx_buffer_8bit* empty_buffer;
     int buffer_size = (int) width * (int) height;
 
-    empty_buffer = malloc(sizeof(gfx_buffer_8bit));
+    empty_buffer = malloc(sizeof(struct gfx_buffer_8bit) + (sizeof(byte) * buffer_size));
 
     empty_buffer->buffer_size = buffer_size;
     empty_buffer->is_planar = 0;
     empty_buffer->width = width;
     empty_buffer->height = height;
-    empty_buffer->buffer = malloc(sizeof(byte) * buffer_size);
+
+    /* bitmap buffer is memory immediately after main struct */
+    empty_buffer->buffer = (byte *) empty_buffer + sizeof(struct gfx_buffer_8bit);
 
     return empty_buffer;
 }
@@ -57,23 +58,27 @@ gfx_buffer_8bit* gfx_get_tileset_buffer() {
     return gfx_tileset_buffer;
 }
 
-/* TODO: refactor to ensure memory is allocated contiguously */
 struct gfx_tile_index* _gfx_create_empty_tile_index(byte tile_width, byte tile_height, byte tile_count_horz, byte tile_count_vert) {
     struct gfx_tile_index* empty_tile_index;
-    int tile_count = (int) tile_count_horz * (int) tile_count_vert;
+    byte* testptr;
 
-    empty_tile_index = malloc(sizeof(gfx_tile_index));
+    int tile_count = (int) tile_count_horz * (int) tile_count_vert;
+    /* calculate number of bytes needed to hold bitmap that will represent
+       the two states a tile can currently have */
+    int tile_state_bytes = (tile_count + (8 - tile_count % 8)) * 2;
+
+    empty_tile_index = malloc(sizeof(struct gfx_tile_index) + (sizeof(byte) * (tile_count + tile_state_bytes)));
     empty_tile_index->tile_width = tile_width;
     empty_tile_index->tile_height = tile_height;
     empty_tile_index->tile_count_horz = tile_count_horz;
     empty_tile_index->tile_count_vert = tile_count_vert;
 
-    empty_tile_index->tilemap = malloc(sizeof(byte) * tile_count);
+    /* tile map buffer is memory immediately after main struct */
+    empty_tile_index->tilemap = (byte *) empty_tile_index + sizeof(struct gfx_tile_index);
+    /* tile state bitmap is memory immediately after tile map buffer */
+    /* TODO: ensure this actually works! */
+    empty_tile_index->tilestate = empty_tile_index->tilemap + (sizeof(byte) * tile_count);
 
-    /* calculate number of bytes needed to hold bitmap that will represent
-       the two states a tile can currently have */
-    tile_count = tile_count + (8 - tile_count % 8);
-    empty_tile_index->tilestate = malloc(sizeof(byte) * tile_count);
     return empty_tile_index;
 }
 
