@@ -1,7 +1,7 @@
 @ECHO OFF
 
-SET WCL386=-zdp -wcd=138 -ecc -4s -mf -fp3 -od -d2 -bt=dos -l=dos32a
-REM SET WCL386=-zdp -wcd=138 -ecc -4s -mf -fp3 -od -d2 -bt=dos -l=dos4g 
+SET WCL386=-zdp -wcd=138 -ecc -4s -mf -fp3 -od -d2 -za -bt=dos -l=dos32a
+REM SET WCL386=-zdp -wcd=138 -ecc -4s -mf -fp3 -od -d2 -za -bt=dos -l=dos4g 
 REM "C:\Program Files\NASM\nasm" modex.asm -fobj -o obj\modex.obj -g
 
 WCL386 src\main.c -c -fo=obj\main.obj

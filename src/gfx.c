@@ -14,6 +14,8 @@ byte view_scroll_x;                     // horizontal scroll value
 byte view_scroll_y;                     // vertical scroll value
 
 gfx_buffer_8bit *gfx_screen_buffer;     // main memory representation of current screen
+gfx_buffer_8bit *gfx_tileset_buffer;    // main memory representation of current tileset
+
 gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be drawn in order
 word gfx_command_count;                 // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
@@ -24,20 +26,23 @@ void gfx_init_video() {
     render_page_width = PAGE_WIDTH;
     render_page_height = PAGE_HEIGHT;
     gfx_screen_buffer = gfx_create_empty_buffer_8bit(render_page_width, render_page_height);
+    gfx_tileset_buffer = gfx_create_empty_buffer_8bit(TILE_WIDTH * 16, TILE_HEIGHT * 16);
 
     render_tile_width = render_page_width / TILE_WIDTH;
     render_tile_height = render_page_height / TILE_HEIGHT;
     gfx_command_count_max = (word) render_tile_width * (word) render_tile_height;
     // display list buffer size determined by max number of tiles on-screen
     gfx_display_list = malloc(sizeof(gfx_draw_command) * gfx_command_count_max);
-};
+}
 
 struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
     int buffer_size;
     struct gfx_buffer_8bit* empty_buffer;
 
     buffer_size = ((int) width * (int) height) * sizeof(byte);
-    empty_buffer = malloc(sizeof(gfx_buffer_8bit) + buffer_size);
+
+    /* takes into account buffer array of length 1 */
+    empty_buffer = malloc(sizeof(gfx_buffer_8bit) + buffer_size - 1);
 
     empty_buffer->buffer_size = buffer_size;
     empty_buffer->is_planar = 0;
@@ -45,7 +50,7 @@ struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
     empty_buffer->height = height;
 
     return empty_buffer;
-};
+}
 
 /**
  * Returns pointer to the main memory buffer representation
@@ -53,7 +58,15 @@ struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
  **/
 byte* gfx_get_screen_buffer() {
     return gfx_screen_buffer->buffer;
-};
+}
+
+/**
+ * Returns pointer to the main memory buffer representation
+ * of the currently loaded tileset
+ **/
+byte* gfx_get_tileset_buffer() {
+    return gfx_tileset_buffer->buffer;
+}
 
 /**
  * Handler for drawing a tile as a solid color
@@ -67,7 +80,7 @@ void _gfx_draw_color(gfx_draw_command* command) {
     byte color = command->arg0;
     byte scr_tile_index_horz = command->arg1;
     byte scr_tile_index_vert = command->arg2;
-};
+}
 
 /**
  * Handler for performing VRAM-to-VRAM blit of a given tile
@@ -81,7 +94,7 @@ void _gfx_draw_tile(gfx_draw_command* command) {
     byte tile_index = command->arg0;
     byte scr_tile_index_horz = command->arg1;
     byte scr_tile_index_vert = command->arg2;
-};
+}
 
 /**
  * Handler for performing main memory buffer-to-VRAM blit of
@@ -101,7 +114,7 @@ void _gfx_blit_tiles(gfx_draw_command* command) {
     byte buf_tile_index_vert = command->arg1;
     byte length_horz = command->arg2 & 0x0F;
     byte length_vert = command->arg2 >> 4;
-};
+}
 
 /**
  * Handler for blitting entire main memory screen buffer into
@@ -114,9 +127,23 @@ void _gfx_blit_buffer() {
     word width = gfx_screen_buffer->width;
     word height = gfx_screen_buffer->height;
     byte *buffer = gfx_screen_buffer->buffer;
-    // TODO: logic to draw on current page
     vga_blit_buffer_to_vram(buffer, width, height, 0, 0, 0, current_render_page_offset, width, height);
-};
+}
+
+/**
+ * Handler for mirroring the contents of one page to the other
+ * via VRAM-to-VRAM copy
+ * 
+ * Command arguments:
+ *  - None
+ **/
+void _gfx_mirror_page() {
+    word mirror_render_page_offset = current_render_page ? PAGE_HEIGHT : 0;
+    word width = gfx_screen_buffer->width;
+    word height = gfx_screen_buffer->height;
+    byte *buffer = gfx_screen_buffer->buffer;
+    vga_blit_buffer_to_vram(buffer, width, height, 0, 0, 0, mirror_render_page_offset, width, height);
+}
 
 /**
  * Push drawing command to display list and increment count.
@@ -136,12 +163,15 @@ void _gfx_add_command_to_display_list(int command, byte arg0, byte arg1, byte ar
     cur_command->arg2 = arg2;
 
     gfx_command_count++;
-    printf("gfx_command_count: %d", gfx_command_count);
-};
+}
 
 void gfx_blit_screen_buffer() {
     _gfx_add_command_to_display_list(GFX_BLIT_BUFFER, 0, 0 ,0);
-};
+}
+
+void gfx_mirror_page() {
+    _gfx_add_command_to_display_list(GFX_MIRROR_PAGE, 0, 0 ,0);
+}
 
 /**
  * Main rendering call
@@ -170,6 +200,9 @@ void gfx_render_all() {
             case GFX_BLIT_BUFFER:
                 _gfx_blit_buffer(cur_command);
                 break;
+            case GFX_MIRROR_PAGE:
+                _gfx_mirror_page(cur_command);
+                break;
         }
     };
 
@@ -178,4 +211,4 @@ void gfx_render_all() {
 
     /* page flip + scrolling */
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
-};
+}
