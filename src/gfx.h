@@ -22,14 +22,14 @@ typedef struct gfx_buffer_8bit {
     byte *buffer;                           // array of bytes that holds raw bitmap data
 } gfx_buffer_8bit;
 
-typedef struct gfx_tile_screen {
+typedef struct gfx_tile_index {
     byte tile_width;                        // tile width (in pixels)
     byte tile_height;                       // tile height (in pixels)
     byte tile_count_horz;                   // number of horizontal tiles
     byte tile_count_vert;                   // number of vertical tiles
     byte *tilemap;                          // tile indexes currently on screen
     byte *tilestate;                        // bitmap of current tile states
-} gfx_tile_screen;
+} gfx_tile_index;
 
 typedef struct gfx_draw_command {
     byte command;
@@ -41,10 +41,11 @@ typedef struct gfx_draw_command {
 void gfx_init_video();
 struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height);
 void gfx_blit_buffer_to_active_page(gfx_buffer_8bit* buffer, word dest_x, word dest_y);
-byte* gfx_get_screen_buffer();
-byte* gfx_get_tileset_buffer();
+gfx_buffer_8bit* gfx_get_screen_buffer();
+gfx_buffer_8bit* gfx_get_tileset_buffer();
 void gfx_blit_screen_buffer();
 void gfx_mirror_page();
 void gfx_render_all();
+void gfx_draw_bitmap(gfx_buffer_8bit *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 
 #endif

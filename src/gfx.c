@@ -2,6 +2,7 @@
 #include "vga.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 word render_page_width;                 // rendering page width (visible + non-visible, in pixels)
 word render_page_height;                // rendering page height (visible + non-visible, in pixels)
@@ -16,28 +17,18 @@ byte view_scroll_y;                     // vertical scroll value
 gfx_buffer_8bit *gfx_screen_buffer;     // main memory representation of current screen
 gfx_buffer_8bit *gfx_tileset_buffer;    // main memory representation of current tileset
 
+gfx_tile_index *tile_index_main;        // tile index for main memory screen buffer
+gfx_tile_index *tile_index_page_1;      // tile index for VRAM page 1
+gfx_tile_index *tile_index_page_2;      // tile index for VRAM page 2
+
 gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be drawn in order
 word gfx_command_count;                 // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
 
-void gfx_init_video() {
-    vga_init_modex();
-    vga_scroll_offset(0, 0);
-    render_page_width = PAGE_WIDTH;
-    render_page_height = PAGE_HEIGHT;
-    gfx_screen_buffer = gfx_create_empty_buffer_8bit(render_page_width, render_page_height);
-    gfx_tileset_buffer = gfx_create_empty_buffer_8bit(TILE_WIDTH * 16, TILE_HEIGHT * 16);
-
-    render_tile_width = render_page_width / TILE_WIDTH;
-    render_tile_height = render_page_height / TILE_HEIGHT;
-    gfx_command_count_max = (word) render_tile_width * (word) render_tile_height;
-    // display list buffer size determined by max number of tiles on-screen
-    gfx_display_list = malloc(sizeof(gfx_draw_command) * gfx_command_count_max);
-}
-
+/* TODO: refactor to ensure memory is allocated contiguously */
 struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
-    int buffer_size = (int) width * (int) height;
     struct gfx_buffer_8bit* empty_buffer;
+    int buffer_size = (int) width * (int) height;
 
     empty_buffer = malloc(sizeof(gfx_buffer_8bit));
 
@@ -54,17 +45,44 @@ struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
  * Returns pointer to the main memory buffer representation
  * of the screen
  **/
-byte* gfx_get_screen_buffer() {
-    return gfx_screen_buffer->buffer;
+gfx_buffer_8bit* gfx_get_screen_buffer() {
+    return gfx_screen_buffer;
 }
 
 /**
  * Returns pointer to the main memory buffer representation
  * of the currently loaded tileset
  **/
-byte* gfx_get_tileset_buffer() {
-    return gfx_tileset_buffer->buffer;
+gfx_buffer_8bit* gfx_get_tileset_buffer() {
+    return gfx_tileset_buffer;
 }
+
+/* TODO: refactor to ensure memory is allocated contiguously */
+struct gfx_tile_index* _gfx_create_empty_tile_index(byte tile_width, byte tile_height, byte tile_count_horz, byte tile_count_vert) {
+    struct gfx_tile_index* empty_tile_index;
+    int tile_count = (int) tile_count_horz * (int) tile_count_vert;
+
+    empty_tile_index = malloc(sizeof(gfx_tile_index));
+    empty_tile_index->tile_width = tile_width;
+    empty_tile_index->tile_height = tile_height;
+    empty_tile_index->tile_count_horz = tile_count_horz;
+    empty_tile_index->tile_count_vert = tile_count_vert;
+
+    empty_tile_index->tilemap = malloc(sizeof(byte) * tile_count);
+
+    /* calculate number of bytes needed to hold bitmap that will represent
+       the two states a tile can currently have */
+    tile_count = tile_count + (8 - tile_count % 8);
+    empty_tile_index->tilestate = malloc(sizeof(byte) * tile_count);
+    return empty_tile_index;
+}
+
+/**
+ * GRAPHICS COMMAND HANDLERS
+ * 
+ * These are the commands that map the graphics engine's
+ * drawing commands to hardware-specific ones
+ **/
 
 /**
  * Handler for drawing a tile as a solid color
@@ -163,12 +181,58 @@ void _gfx_add_command_to_display_list(int command, byte arg0, byte arg1, byte ar
     gfx_command_count++;
 }
 
+/**
+ * GRAPHICS API DEFINITIONS
+ * 
+ * These are the drawing routines that can be called
+ * from elsewhere
+ **/
+
 void gfx_blit_screen_buffer() {
     _gfx_add_command_to_display_list(GFX_BLIT_BUFFER, 0, 0 ,0);
 }
 
 void gfx_mirror_page() {
     _gfx_add_command_to_display_list(GFX_MIRROR_PAGE, 0, 0 ,0);
+}
+
+void gfx_draw_bitmap(gfx_buffer_8bit *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
+    byte *screen_buffer = gfx_screen_buffer->buffer;
+    word screen_buffer_width = gfx_screen_buffer->width;
+    word screen_buffer_height = gfx_screen_buffer->height;
+    byte *bitmap_buffer = bitmap->buffer;
+    word bitmap_buffer_width = bitmap->width;
+    word bitmap_buffer_height = bitmap->height;
+    int i, j;
+    int max_x = MIN(screen_buffer_width, dest_x + width);
+    int max_y = MIN(screen_buffer_height, dest_y + height);
+    int max_width = max_x - dest_x;
+    int max_height = max_y - dest_y;
+
+    for(i = 0, j = source_y; j < max_height; i++, j++) {
+        memcpy(&screen_buffer[screen_buffer_width * (dest_y + i) + dest_x], &bitmap_buffer[bitmap_buffer_width * j + source_x], sizeof(byte) * max_width);
+    }
+}
+
+/**
+ * Video initialization
+ **/
+void gfx_init_video() {
+    vga_init_modex();
+    vga_scroll_offset(0, 0);
+    render_page_width = PAGE_WIDTH;
+    render_page_height = PAGE_HEIGHT;
+    gfx_screen_buffer = gfx_create_empty_buffer_8bit(render_page_width, render_page_height);
+
+    /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
+    gfx_tileset_buffer = gfx_create_empty_buffer_8bit(TILE_WIDTH * 16, TILE_HEIGHT * 16);
+
+    render_tile_width = render_page_width / TILE_WIDTH;
+    render_tile_height = render_page_height / TILE_HEIGHT;
+    gfx_command_count_max = (word) render_tile_width * (word) render_tile_height;
+    // display list buffer size determined by max number of tiles on-screen
+    gfx_display_list = malloc(sizeof(gfx_draw_command) * gfx_command_count_max);
+    tile_index_main = _gfx_create_empty_tile_index(TILE_WIDTH, TILE_HEIGHT, render_tile_width, render_tile_height);
 }
 
 /**
