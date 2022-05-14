@@ -273,15 +273,20 @@ int test_tile_routine(){
 
     render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
     render_pattern_to_buffer_2(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
-    gfx_draw_bitmap(tileset_buffer, 0, 0, 64, 64, 64, 64);
+    //gfx_draw_bitmap_to_screen(tileset_buffer, 0, 0, 0, 0, 255, 255);
 
     gfx_blit_screen_buffer();
     gfx_render_all();
     gfx_mirror_page();
 
     // main program loop
+    i = 0;
     while (!_kbhit()){
+        gfx_set_tile(i++, i % 16 + 2, i / 16);
+        gfx_blit_screen_buffer();
         gfx_render_all();
+
+        if(i == 256) i = 0;
     }
 
     vga_exit_modex();

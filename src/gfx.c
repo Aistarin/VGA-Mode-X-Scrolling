@@ -77,10 +77,10 @@ struct gfx_tile_index* _gfx_create_empty_tile_index(byte tile_width, byte tile_h
     empty_tile_index->tile_count_vert = tile_count_vert;
 
     /* tile map buffer is memory immediately after main struct */
-    empty_tile_index->tile_index = (byte *) empty_tile_index + sizeof(struct gfx_tile_index);
+    empty_tile_index->tiles = (byte *) empty_tile_index + sizeof(struct gfx_tile_index);
     /* tile state bitmap is memory immediately after tile map buffer */
     /* TODO: ensure this actually works! */
-    empty_tile_index->tile_state = empty_tile_index->tile_index + (sizeof(byte) * tile_count);
+    empty_tile_index->tile_states = empty_tile_index->tiles + (sizeof(byte) * tile_count);
 
     return empty_tile_index;
 }
@@ -204,22 +204,55 @@ void gfx_mirror_page() {
     _gfx_add_command_to_display_list(GFX_MIRROR_PAGE, 0, 0 ,0);
 }
 
-void gfx_draw_bitmap(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
-    byte *screen_buffer = gfx_screen_buffer->buffer;
-    word screen_buffer_width = gfx_screen_buffer->width;
-    word screen_buffer_height = gfx_screen_buffer->height;
-    byte *bitmap_buffer = bitmap->buffer;
-    word bitmap_buffer_width = bitmap->width;
-    word bitmap_buffer_height = bitmap->height;
-    int i, j;
-    int max_x = MIN(screen_buffer_width, dest_x + width);
-    int max_y = MIN(screen_buffer_height, dest_y + height);
+void _gfx_draw_bitmap_to_bitmap(
+    gfx_buffer *source_bitmap,
+    gfx_buffer *dest_bitmap,
+    word source_x,
+    word source_y,
+    word dest_x,
+    word dest_y,
+    word width,
+    word height
+) {
+    byte *dest_buffer = dest_bitmap->buffer;
+    word dest_buffer_width = dest_bitmap->width;
+    word dest_buffer_height = dest_bitmap->height;
+    byte *source_buffer = source_bitmap->buffer;
+    word source_buffer_width = source_bitmap->width;
+    word source_buffer_height = source_bitmap->height;
+    int i;
+    int max_x = MIN(dest_buffer_width, dest_x + width);
+    int max_y = MIN(dest_buffer_height, dest_y + height);
     int max_width = max_x - dest_x;
     int max_height = max_y - dest_y;
 
-    for(i = 0, j = source_y; j < max_height; i++, j++) {
-        memcpy(&screen_buffer[screen_buffer_width * (dest_y + i) + dest_x], &bitmap_buffer[bitmap_buffer_width * j + source_x], sizeof(byte) * max_width);
+    for(i = 0; i < max_height; i++) {
+        memcpy(&dest_buffer[dest_buffer_width * (dest_y + i) + dest_x], &source_buffer[source_buffer_width * (source_y + i) + source_x], sizeof(byte) * max_width);
     }
+}
+
+void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
+    _gfx_draw_bitmap_to_bitmap(bitmap, gfx_screen_buffer, source_x, source_y, dest_x, dest_y, width, height);
+}
+
+void gfx_set_tile(byte tile, byte x, byte y) {
+    int tile_offset = ((int) y * (int) tile_index_main->tile_height) + x;
+    tile_index_main->tiles[tile_offset] = tile;
+
+    /* set the first bit of the tile state to indicate that the tile
+       has been updated */
+    tile_index_main->tile_states[tile_offset] |= 1;
+
+    _gfx_draw_bitmap_to_bitmap(
+        gfx_tileset_buffer,
+        gfx_screen_buffer,
+        (tile % TILE_WIDTH) * TILE_WIDTH,
+        (tile / TILE_HEIGHT) * TILE_HEIGHT,
+        x * TILE_WIDTH,
+        y * TILE_HEIGHT,
+        TILE_WIDTH,
+        TILE_HEIGHT
+    );
 }
 
 /**

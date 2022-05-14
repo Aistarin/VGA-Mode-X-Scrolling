@@ -38,8 +38,8 @@ typedef struct gfx_tile_index {
     byte tile_height;                       // tile height (in pixels)
     byte tile_count_horz;                   // number of horizontal tiles
     byte tile_count_vert;                   // number of vertical tiles
-    byte *tile_index;                       // index of tiles currently on screen
-    byte *tile_state;                       // bitmap of current tile state(s)
+    byte *tiles;                            // index of tiles currently on screen
+    byte *tile_states;                       // bitmap of current tile state(s)
 } gfx_tile_index;
 
 typedef struct gfx_draw_command {
@@ -54,9 +54,10 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
 void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
 gfx_buffer* gfx_get_screen_buffer();
 gfx_buffer* gfx_get_tileset_buffer();
+void gfx_set_tile(byte tile, byte x, byte y);
 void gfx_blit_screen_buffer();
 void gfx_mirror_page();
 void gfx_render_all();
-void gfx_draw_bitmap(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
+void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 
 #endif
