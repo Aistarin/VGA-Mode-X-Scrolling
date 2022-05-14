@@ -14,21 +14,32 @@ enum gfx_draw_commands {
     GFX_MIRROR_PAGE
 };
 
-typedef struct gfx_buffer_8bit {
-    dword buffer_size;                      // total size of buffer in bytes
+enum gfx_color_depths {
+    GFX_BUFFER_BPP_8,
+    GFX_BUFFER_BPP_15,
+    GFX_BUFFER_BPP_16,
+    GFX_BUFFER_BPP_24,
+    GFX_BUFFER_BPP_32
+};
+
+int gfx_color_depth_sizes[] = {1, 2, 2, 3, 4};
+
+typedef struct gfx_buffer {
+    int color_depth;                        // color depth of image
+    dword buffer_size;                      // total size of buffer (in bytes)
     byte is_planar;                         // flag to determine whether or not buffer is stored in planar format
     word width;                             // buffer width (in pixels)
     word height;                            // buffer height (in pixels)
     byte *buffer;                           // array of bytes that holds raw bitmap data
-} gfx_buffer_8bit;
+} gfx_buffer;
 
 typedef struct gfx_tile_index {
     byte tile_width;                        // tile width (in pixels)
     byte tile_height;                       // tile height (in pixels)
     byte tile_count_horz;                   // number of horizontal tiles
     byte tile_count_vert;                   // number of vertical tiles
-    byte *tilemap;                          // tile indexes currently on screen
-    byte *tilestate;                        // bitmap of current tile states
+    byte *tile_index;                       // index of tiles currently on screen
+    byte *tile_state;                       // bitmap of current tile state(s)
 } gfx_tile_index;
 
 typedef struct gfx_draw_command {
@@ -39,13 +50,13 @@ typedef struct gfx_draw_command {
 } gfx_draw_command;
 
 void gfx_init_video();
-struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height);
-void gfx_blit_buffer_to_active_page(gfx_buffer_8bit* buffer, word dest_x, word dest_y);
-gfx_buffer_8bit* gfx_get_screen_buffer();
-gfx_buffer_8bit* gfx_get_tileset_buffer();
+struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height);
+void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
+gfx_buffer* gfx_get_screen_buffer();
+gfx_buffer* gfx_get_tileset_buffer();
 void gfx_blit_screen_buffer();
 void gfx_mirror_page();
 void gfx_render_all();
-void gfx_draw_bitmap(gfx_buffer_8bit *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
+void gfx_draw_bitmap(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 
 #endif

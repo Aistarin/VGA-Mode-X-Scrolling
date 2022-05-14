@@ -263,15 +263,8 @@ int test_tile_routine(){
     word i, j, k;
     word bounce = 1;
     byte color = 0;
-    gfx_buffer_8bit *screen_buffer;
-    gfx_buffer_8bit *tileset_buffer;
-
-    init_sin();
-
-    // gfx_buffer_8bit *screen_buffer = gfx_create_empty_buffer_8bit(PAGE_WIDTH, PAGE_HEIGHT);
-    // gfx_buffer_8bit *tile_buffer = gfx_create_empty_buffer_8bit(128, 128);
-    // render_pattern_to_buffer_2(screen_buffer->buffer, PAGE_WIDTH, PAGE_HEIGHT);
-    // render_pattern_to_buffer_1(tile_buffer->buffer, 128, 128);
+    gfx_buffer *screen_buffer;
+    gfx_buffer *tileset_buffer;
 
     gfx_init_video();
 

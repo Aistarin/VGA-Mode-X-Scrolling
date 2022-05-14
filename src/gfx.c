@@ -14,8 +14,8 @@ word current_render_page_offset;        // current page offset in VRAM
 byte view_scroll_x;                     // horizontal scroll value
 byte view_scroll_y;                     // vertical scroll value
 
-gfx_buffer_8bit *gfx_screen_buffer;     // main memory representation of current screen
-gfx_buffer_8bit *gfx_tileset_buffer;    // main memory representation of current tileset
+gfx_buffer *gfx_screen_buffer;     // main memory representation of current screen
+gfx_buffer *gfx_tileset_buffer;    // main memory representation of current tileset
 
 gfx_tile_index *tile_index_main;        // tile index for main memory screen buffer
 gfx_tile_index *tile_index_page_1;      // tile index for VRAM page 1
@@ -25,11 +25,14 @@ gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be dra
 word gfx_command_count;                 // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
 
-struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
-    struct gfx_buffer_8bit* empty_buffer;
+struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height) {
+    struct gfx_buffer* empty_buffer;
     int buffer_size = (int) width * (int) height;
 
-    empty_buffer = malloc(sizeof(struct gfx_buffer_8bit) + (sizeof(byte) * buffer_size));
+    /* align buffer size to multiple of int size */
+    buffer_size = buffer_size + ((sizeof(unsigned int)) - buffer_size % sizeof(unsigned int));
+
+    empty_buffer = malloc(sizeof(struct gfx_buffer) + (sizeof(byte) * buffer_size));
 
     empty_buffer->buffer_size = buffer_size;
     empty_buffer->is_planar = 0;
@@ -37,7 +40,7 @@ struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
     empty_buffer->height = height;
 
     /* bitmap buffer is memory immediately after main struct */
-    empty_buffer->buffer = (byte *) empty_buffer + sizeof(struct gfx_buffer_8bit);
+    empty_buffer->buffer = (byte *) empty_buffer + sizeof(struct gfx_buffer);
 
     return empty_buffer;
 }
@@ -46,7 +49,7 @@ struct gfx_buffer_8bit* gfx_create_empty_buffer_8bit(word width, word height) {
  * Returns pointer to the main memory buffer representation
  * of the screen
  **/
-gfx_buffer_8bit* gfx_get_screen_buffer() {
+gfx_buffer* gfx_get_screen_buffer() {
     return gfx_screen_buffer;
 }
 
@@ -54,7 +57,7 @@ gfx_buffer_8bit* gfx_get_screen_buffer() {
  * Returns pointer to the main memory buffer representation
  * of the currently loaded tileset
  **/
-gfx_buffer_8bit* gfx_get_tileset_buffer() {
+gfx_buffer* gfx_get_tileset_buffer() {
     return gfx_tileset_buffer;
 }
 
@@ -74,10 +77,10 @@ struct gfx_tile_index* _gfx_create_empty_tile_index(byte tile_width, byte tile_h
     empty_tile_index->tile_count_vert = tile_count_vert;
 
     /* tile map buffer is memory immediately after main struct */
-    empty_tile_index->tilemap = (byte *) empty_tile_index + sizeof(struct gfx_tile_index);
+    empty_tile_index->tile_index = (byte *) empty_tile_index + sizeof(struct gfx_tile_index);
     /* tile state bitmap is memory immediately after tile map buffer */
     /* TODO: ensure this actually works! */
-    empty_tile_index->tilestate = empty_tile_index->tilemap + (sizeof(byte) * tile_count);
+    empty_tile_index->tile_state = empty_tile_index->tile_index + (sizeof(byte) * tile_count);
 
     return empty_tile_index;
 }
@@ -201,7 +204,7 @@ void gfx_mirror_page() {
     _gfx_add_command_to_display_list(GFX_MIRROR_PAGE, 0, 0 ,0);
 }
 
-void gfx_draw_bitmap(gfx_buffer_8bit *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
+void gfx_draw_bitmap(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
     byte *screen_buffer = gfx_screen_buffer->buffer;
     word screen_buffer_width = gfx_screen_buffer->width;
     word screen_buffer_height = gfx_screen_buffer->height;
@@ -227,10 +230,10 @@ void gfx_init_video() {
     vga_scroll_offset(0, 0);
     render_page_width = PAGE_WIDTH;
     render_page_height = PAGE_HEIGHT;
-    gfx_screen_buffer = gfx_create_empty_buffer_8bit(render_page_width, render_page_height);
+    gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height);
 
     /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
-    gfx_tileset_buffer = gfx_create_empty_buffer_8bit(TILE_WIDTH * 16, TILE_HEIGHT * 16);
+    gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16);
 
     render_tile_width = render_page_width / TILE_WIDTH;
     render_tile_height = render_page_height / TILE_HEIGHT;
