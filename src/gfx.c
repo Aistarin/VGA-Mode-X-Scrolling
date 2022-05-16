@@ -225,15 +225,26 @@ void _gfx_draw_bitmap_to_bitmap(
 }
 
 void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
+    byte x, y;
+    byte tile_min_x = dest_x / TILE_WIDTH;
+    byte tile_min_y = dest_y / TILE_HEIGHT;
+    byte tile_max_x = MIN((dest_x + width) / TILE_WIDTH, render_tile_width);
+    byte tile_max_y = MIN((dest_y + height) / TILE_HEIGHT, render_tile_height);
+    int tile_offset;
+    for(y = tile_min_y; y <= tile_max_y; y++)
+        for(x = tile_min_x; x <= tile_max_x; x++){
+            tile_offset = ((int) y * (int) render_tile_width) + (int) x;
+            tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_SPRITE;
+        };
     _gfx_draw_bitmap_to_bitmap(bitmap, gfx_screen_buffer, source_x, source_y, dest_x, dest_y, width, height);
 }
 
 void gfx_set_tile(byte tile, byte x, byte y) {
-    int tile_offset = ((int) y * (int) render_tile_height) + x;
+    int tile_offset = ((int) y * (int) render_tile_width) + (int) x;
     tile_index_main[tile_offset] = tile;
 
     /* indicate that a tile has been set + is dirty */
-    tile_index_main_states[tile_offset] |= (GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_TILE);
+    tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_TILE;
 
     _gfx_draw_bitmap_to_bitmap(
         gfx_tileset_buffer,
@@ -308,6 +319,8 @@ void gfx_render_all() {
 
             /* unset dirty bit once draw commands have been queued
                for second page */
+            /* TODO: make dirty bits persist for next page regardless
+               of which one it was marked dirty for */
             if(current_render_page){
                 main_tile_state &= ~GFX_TILE_STATE_DIRTY;
                 tile_index_main_states[i] = main_tile_state;

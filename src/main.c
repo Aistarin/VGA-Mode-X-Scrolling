@@ -261,25 +261,57 @@ int test_pattern_routine(){
 
 int test_tile_routine(){
     word i, j, k;
+    int hspeed = 0;
+    int vspeed = 0;
+    int xpos = 0;
+    int ypos = 0;
     word bounce = 1;
+    word x = 0, y = 0;
     byte color = 0;
     gfx_buffer *screen_buffer;
     gfx_buffer *tileset_buffer;
+    gfx_buffer *sprite_buffer;
 
     gfx_init_video();
 
-    screen_buffer = gfx_get_screen_buffer();
+    screen_buffer = gfx_create_empty_buffer(0, 336, 256);
     tileset_buffer = gfx_get_tileset_buffer();
+    sprite_buffer = gfx_create_empty_buffer(0, 16, 16);
+
+    for(i=0;i<256;i++)
+        sprite_buffer->buffer[i] = 1;
 
     render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
     render_pattern_to_buffer_2(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
 
+    gfx_draw_bitmap_to_screen(screen_buffer, 0, 0, 0, 0, 336, 256);
+
+    // gfx_blit_screen_buffer();
+    // gfx_render_all();
+    // gfx_mirror_page();
+
     // main program loop
     i = 0;
+    j = 0;
+    k = 0;
+    hspeed = 1;
+    vspeed = 1;
     while (!_kbhit()){
-        if(i < 336){
-            gfx_set_tile(i, i % 16, i / 16);
+        if(i < 256){
+            gfx_set_tile(i, i % 16 + 2, i / 16);
             i++;
+        } else {
+            gfx_draw_bitmap_to_screen(sprite_buffer, 0, 0, (word) xpos, (word) ypos, 16, 16);
+            xpos += hspeed;
+            ypos += vspeed;
+
+            if(xpos >= 304 || xpos <= 0) {
+                hspeed = -hspeed;
+            }
+
+            if(ypos >= 224 || ypos <= 0) {
+                vspeed = -vspeed;
+            }
         }
         gfx_render_all();
     }
