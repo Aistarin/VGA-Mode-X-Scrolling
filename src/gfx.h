@@ -22,6 +22,12 @@ enum gfx_color_depths {
     GFX_BUFFER_BPP_32
 };
 
+enum gfx_tile_states {
+    GFX_TILE_STATE_DIRTY    = 0x01,         // screen tile has been modified
+    GFX_TILE_STATE_TILE     = 0x02,         // screen tile has a tile assigned to it
+    GFX_TILE_STATE_SPRITE   = 0x04          // screen tile has had a sprite drawn to it
+};
+
 int gfx_color_depth_sizes[] = {1, 2, 2, 3, 4};
 
 typedef struct gfx_buffer {

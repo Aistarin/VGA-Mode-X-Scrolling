@@ -274,10 +274,6 @@ int test_tile_routine(){
     render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
     render_pattern_to_buffer_2(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
 
-    gfx_blit_screen_buffer();
-    gfx_render_all();
-    gfx_mirror_page();
-
     // main program loop
     i = 0;
     while (!_kbhit()){
