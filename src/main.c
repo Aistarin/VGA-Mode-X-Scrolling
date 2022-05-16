@@ -277,13 +277,11 @@ int test_tile_routine(){
     // main program loop
     i = 0;
     while (!_kbhit()){
-        gfx_set_tile(i, i % 16, i / 16);
-        // gfx_blit_screen_buffer();
+        if(i < 336){
+            gfx_set_tile(i, i % 16, i / 16);
+            i++;
+        }
         gfx_render_all();
-
-        i++;
-
-        if(i == 256) i = 0;
     }
 
     vga_exit_modex();
