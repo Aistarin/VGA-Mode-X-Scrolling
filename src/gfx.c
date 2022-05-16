@@ -14,16 +14,19 @@ word current_render_page_offset;        // current page offset in VRAM
 byte view_scroll_x;                     // horizontal scroll value
 byte view_scroll_y;                     // vertical scroll value
 
-gfx_buffer *gfx_screen_buffer;     // main memory representation of current screen
-gfx_buffer *gfx_tileset_buffer;    // main memory representation of current tileset
+gfx_buffer *gfx_screen_buffer;          // main memory representation of current screen
+gfx_buffer *gfx_tileset_buffer;         // main memory representation of current tileset
 
-gfx_tile_index *tile_index_main;        // tile index for main memory screen buffer
-gfx_tile_index *tile_index_page_1;      // tile index for VRAM page 1
-gfx_tile_index *tile_index_page_2;      // tile index for VRAM page 2
+byte *tile_index_main;                  // tile index for main memory screen buffer
+byte *tile_index_page_1;                // tile index for VRAM page 1
+byte *tile_index_page_2;                // tile index for VRAM page 2
+byte *tile_index_states;                // states for all tile indexes
 
 gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be drawn in order
 word gfx_command_count;                 // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
+
+int frame_number = 0;
 
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height) {
     struct gfx_buffer* empty_buffer;
@@ -59,30 +62,6 @@ gfx_buffer* gfx_get_screen_buffer() {
  **/
 gfx_buffer* gfx_get_tileset_buffer() {
     return gfx_tileset_buffer;
-}
-
-struct gfx_tile_index* _gfx_create_empty_tile_index(byte tile_width, byte tile_height, byte tile_count_horz, byte tile_count_vert) {
-    struct gfx_tile_index* empty_tile_index;
-    byte* testptr;
-
-    int tile_count = (int) tile_count_horz * (int) tile_count_vert;
-    /* calculate number of bytes needed to hold bitmap that will represent
-       the two states a tile can currently have */
-    int tile_state_bytes = (tile_count + (8 - tile_count % 8)) * 2;
-
-    empty_tile_index = malloc(sizeof(struct gfx_tile_index) + (sizeof(byte) * (tile_count + tile_state_bytes)));
-    empty_tile_index->tile_width = tile_width;
-    empty_tile_index->tile_height = tile_height;
-    empty_tile_index->tile_count_horz = tile_count_horz;
-    empty_tile_index->tile_count_vert = tile_count_vert;
-
-    /* tile map buffer is memory immediately after main struct */
-    empty_tile_index->tiles = (byte *) empty_tile_index + sizeof(struct gfx_tile_index);
-    /* tile state bitmap is memory immediately after tile map buffer */
-    /* TODO: ensure this actually works! */
-    empty_tile_index->tile_states = empty_tile_index->tiles + (sizeof(byte) * tile_count);
-
-    return empty_tile_index;
 }
 
 /**
@@ -138,6 +117,18 @@ void _gfx_blit_tiles(gfx_draw_command* command) {
     byte buf_tile_index_vert = command->arg1;
     byte length_horz = command->arg2 & 0x0F;
     byte length_vert = command->arg2 >> 4;
+
+    vga_blit_buffer_to_vram(
+        gfx_screen_buffer->buffer,
+        gfx_screen_buffer->width,
+        gfx_screen_buffer->height,
+        buf_tile_index_horz * TILE_WIDTH,
+        buf_tile_index_vert * TILE_HEIGHT,
+        buf_tile_index_horz * TILE_WIDTH,
+        current_render_page_offset + buf_tile_index_vert * TILE_HEIGHT,
+        TILE_WIDTH,
+        TILE_HEIGHT
+    );
 }
 
 /**
@@ -236,12 +227,12 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
 }
 
 void gfx_set_tile(byte tile, byte x, byte y) {
-    int tile_offset = ((int) y * (int) tile_index_main->tile_height) + x;
-    tile_index_main->tiles[tile_offset] = tile;
+    int tile_offset = ((int) y * (int) render_tile_height) + x;
+    tile_index_main[tile_offset] = tile;
 
-    /* set the first bit of the tile state to indicate that the tile
-       has been updated */
-    tile_index_main->tile_states[tile_offset] |= 1;
+    /* set the first two bits of the tile state to indicate that the
+       tile has been set and updated */
+    tile_index_states[tile_offset] |= 3;
 
     _gfx_draw_bitmap_to_bitmap(
         gfx_tileset_buffer,
@@ -273,7 +264,10 @@ void gfx_init_video() {
     gfx_command_count_max = (word) render_tile_width * (word) render_tile_height;
     // display list buffer size determined by max number of tiles on-screen
     gfx_display_list = malloc(sizeof(gfx_draw_command) * gfx_command_count_max);
-    tile_index_main = _gfx_create_empty_tile_index(TILE_WIDTH, TILE_HEIGHT, render_tile_width, render_tile_height);
+    tile_index_main = calloc(render_tile_width * render_tile_height, sizeof(byte));
+    tile_index_page_1 = calloc(render_tile_width * render_tile_height, sizeof(byte));
+    tile_index_page_2 = calloc(render_tile_width * render_tile_height, sizeof(byte));
+    tile_index_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
 }
 
 /**
@@ -281,11 +275,23 @@ void gfx_init_video() {
  **/
 void gfx_render_all() {
     int i;
+    byte x, y;
     gfx_draw_command *cur_command;
+    byte *current_tile_index;
 
     /* switch to offscreen rendering page */
     current_render_page = 1 - current_render_page;
     current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
+    current_tile_index = current_render_page ? tile_index_page_2 : tile_index_page_1;
+
+    for(i = 0; i < render_tile_width * render_tile_height; i++){
+        if(current_tile_index[i] != tile_index_main[i]) {
+            current_tile_index[i] = tile_index_main[i];
+            x = i % TILE_WIDTH;
+            y = i / TILE_HEIGHT;
+            _gfx_add_command_to_display_list(GFX_BLIT_TILES, x, y, 0);
+        };
+    }
 
     /* Loop through and execute all commands in display list */
     for (i = 0; i < gfx_command_count; i++) {
@@ -314,4 +320,5 @@ void gfx_render_all() {
 
     /* page flip + scrolling */
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
+    frame_number++;
 }

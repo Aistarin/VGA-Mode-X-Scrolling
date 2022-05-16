@@ -33,15 +33,6 @@ typedef struct gfx_buffer {
     byte *buffer;                           // array of bytes that holds raw bitmap data
 } gfx_buffer;
 
-typedef struct gfx_tile_index {
-    byte tile_width;                        // tile width (in pixels)
-    byte tile_height;                       // tile height (in pixels)
-    byte tile_count_horz;                   // number of horizontal tiles
-    byte tile_count_vert;                   // number of vertical tiles
-    byte *tiles;                            // index of tiles currently on screen
-    byte *tile_states;                       // bitmap of current tile state(s)
-} gfx_tile_index;
-
 typedef struct gfx_draw_command {
     byte command;
     byte arg0;

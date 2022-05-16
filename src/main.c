@@ -273,7 +273,6 @@ int test_tile_routine(){
 
     render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
     render_pattern_to_buffer_2(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
-    //gfx_draw_bitmap_to_screen(tileset_buffer, 0, 0, 0, 0, 255, 255);
 
     gfx_blit_screen_buffer();
     gfx_render_all();
@@ -282,9 +281,11 @@ int test_tile_routine(){
     // main program loop
     i = 0;
     while (!_kbhit()){
-        gfx_set_tile(i++, i % 16 + 2, i / 16);
-        gfx_blit_screen_buffer();
+        gfx_set_tile(i, i % 16, i / 16);
+        // gfx_blit_screen_buffer();
         gfx_render_all();
+
+        i++;
 
         if(i == 256) i = 0;
     }
