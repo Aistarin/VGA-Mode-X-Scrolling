@@ -2,6 +2,7 @@
     "files.associations": {
         "stdio.h": "c",
         "cmath": "c",
-        "cstddef": "c"
+        "cstddef": "c",
+        "cstdint": "cpp"
     }
 }

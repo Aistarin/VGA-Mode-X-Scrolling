@@ -9,10 +9,10 @@ word render_page_height;                // rendering page height (visible + non-
 byte render_tile_width;                 // rendering page width (in tiles)
 byte render_tile_height;                // rendering page height (in tiles)
 
-byte current_render_page;               // current page displayed
-word current_render_page_offset;        // current page offset in VRAM
-byte view_scroll_x;                     // horizontal scroll value
-byte view_scroll_y;                     // vertical scroll value
+byte current_render_page = 0;           // current page displayed
+word current_render_page_offset = 0;    // current page offset in VRAM
+byte view_scroll_x = 0;                 // horizontal scroll value
+byte view_scroll_y = 0;                 // vertical scroll value
 
 gfx_buffer *gfx_screen_buffer;          // main memory representation of current screen
 gfx_buffer *gfx_tileset_buffer;         // main memory representation of current tileset
@@ -25,7 +25,7 @@ byte *tile_index_page_1_states;         // states for all page 1 tile indexes
 byte *tile_index_page_2_states;         // states for all page 2 tile indexes
 
 gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be drawn in order
-word gfx_command_count;                 // number of commands currently in display list
+word gfx_command_count = 0;             // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
 
 int frame_number = 0;
@@ -231,10 +231,13 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
     byte tile_max_x = MIN((dest_x + width) / TILE_WIDTH, render_tile_width);
     byte tile_max_y = MIN((dest_y + height) / TILE_HEIGHT, render_tile_height);
     int tile_offset;
+    /* TODO: looks like theres's a bug where tiles aligned to the grid still mark
+       the surrounding tiles as dirty, please double check! */
     for(y = tile_min_y; y <= tile_max_y; y++)
         for(x = tile_min_x; x <= tile_max_x; x++){
             tile_offset = ((int) y * (int) render_tile_width) + (int) x;
-            tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_SPRITE;
+            tile_index_main_states[tile_offset] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2);
+            tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE;
         };
     _gfx_draw_bitmap_to_bitmap(bitmap, gfx_screen_buffer, source_x, source_y, dest_x, dest_y, width, height);
 }
@@ -244,7 +247,29 @@ void gfx_set_tile(byte tile, byte x, byte y) {
     tile_index_main[tile_offset] = tile;
 
     /* indicate that a tile has been set + is dirty */
-    tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_TILE;
+    tile_index_main_states[tile_offset] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2);
+    tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_TILE;
+
+    // printf("tile set at x: %d, y: %d\n", x, y);
+
+    _gfx_draw_bitmap_to_bitmap(
+        gfx_tileset_buffer,
+        gfx_screen_buffer,
+        (tile % TILE_WIDTH) * TILE_WIDTH,
+        (tile / TILE_HEIGHT) * TILE_HEIGHT,
+        x * TILE_WIDTH,
+        y * TILE_HEIGHT,
+        TILE_WIDTH,
+        TILE_HEIGHT
+    );
+}
+
+void _gfx_clear_tile_at_index(byte tile_offset) {
+    byte x = tile_offset % render_tile_width;
+    byte y = tile_offset / render_tile_width;
+    byte tile = tile_index_main[tile_offset];
+
+    // printf("clearing tile at x: %d, y: %d, tile_offset: %d\n", x, y, tile_offset);
 
     _gfx_draw_bitmap_to_bitmap(
         gfx_tileset_buffer,
@@ -302,35 +327,28 @@ void gfx_render_all() {
     for(i = 0; i < render_tile_width * render_tile_height; i++){
         main_tile = tile_index_main[i];
         main_tile_state = tile_index_main_states[i];
-        current_page_tile = current_tile_index[i];
-        current_page_tile_state = current_tile_states[i];
-        if((main_tile_state & GFX_TILE_STATE_DIRTY) || (main_tile != current_page_tile)){
+        if(main_tile_state & (GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2)){
             x = i % render_tile_width;
             y = i / render_tile_width;
 
             if(main_tile_state & GFX_TILE_STATE_SPRITE){
                 /* blit tile to VRAM if graphics have been rendered to it */
                 _gfx_add_command_to_display_list(GFX_BLIT_TILES, x, y, 0);
+
             }
             else if (main_tile_state & GFX_TILE_STATE_TILE){
                 /* fast blit cached tile to page */
                 _gfx_add_command_to_display_list(GFX_BLIT_TILES, x, y, 0);
             }
 
-            /* unset dirty bit once draw commands have been queued
-               for second page */
-            /* TODO: make dirty bits persist for next page regardless
-               of which one it was marked dirty for */
+            /* decrement dirty persistent count by 1 */
             if(current_render_page){
-                main_tile_state &= ~GFX_TILE_STATE_DIRTY;
-                tile_index_main_states[i] = main_tile_state;
+                tile_index_main_states[i] = --main_tile_state;
             }
-
-            /* duplicate main tile index and state to page */
-            current_tile_states[i] = tile_index_main_states[i];
-            current_tile_index[i] = main_tile;
         }
     }
+
+    // printf("command count: %d, frame: %d\n", gfx_command_count, frame_number);
 
     /* Loop through and execute all commands in display list */
     for (i = 0; i < gfx_command_count; i++) {
@@ -362,4 +380,13 @@ void gfx_render_all() {
 
     current_render_page = 1 - current_render_page;
     frame_number++;
+
+    /* clear tiles on which sprites have been rendered to */
+    for(i = 0; i < render_tile_width * render_tile_height; i++){
+        main_tile_state = tile_index_main_states[i];
+        if(main_tile_state & (GFX_TILE_STATE_SPRITE)) {
+            _gfx_clear_tile_at_index(i);
+            tile_index_main_states[i] &= ~GFX_TILE_STATE_SPRITE;
+        }
+    }
 }

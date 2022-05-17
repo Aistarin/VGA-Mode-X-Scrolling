@@ -263,7 +263,7 @@ int test_tile_routine(){
     word i, j, k;
     int hspeed = 0;
     int vspeed = 0;
-    int xpos = 0;
+    int xpos = 32;
     int ypos = 0;
     word bounce = 1;
     word x = 0, y = 0;
@@ -279,16 +279,22 @@ int test_tile_routine(){
     sprite_buffer = gfx_create_empty_buffer(0, 16, 16);
 
     for(i=0;i<256;i++)
-        sprite_buffer->buffer[i] = 1;
+        sprite_buffer->buffer[i] = 15;
 
     render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
-    render_pattern_to_buffer_2(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+    render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
 
-    gfx_draw_bitmap_to_screen(screen_buffer, 0, 0, 0, 0, 336, 256);
+    // gfx_draw_bitmap_to_screen(screen_buffer, 0, 0, 0, 0, 336, 256);
 
     // gfx_blit_screen_buffer();
     // gfx_render_all();
     // gfx_mirror_page();
+
+    for(i = 0; i < 32; i++)
+        gfx_set_tile(0, i % 2, i / 2);
+
+    for(i = 0; i < 32; i++)
+        gfx_set_tile(0, i % 2 + 18, i / 2);
 
     // main program loop
     i = 0;
@@ -300,16 +306,21 @@ int test_tile_routine(){
         if(i < 256){
             gfx_set_tile(i, i % 16 + 2, i / 16);
             i++;
-        } else {
+        }
+        else {
             gfx_draw_bitmap_to_screen(sprite_buffer, 0, 0, (word) xpos, (word) ypos, 16, 16);
             xpos += hspeed;
             ypos += vspeed;
 
-            if(xpos >= 304 || xpos <= 0) {
+            if(xpos > 304 || xpos < 0) {
+                if(xpos > 304) xpos = 304;
+                else if(xpos < 0) xpos = 0;
                 hspeed = -hspeed;
             }
 
-            if(ypos >= 224 || ypos <= 0) {
+            if(ypos > 224 || ypos < 0) {
+                if(ypos > 224) ypos = 224;
+                else if(ypos < 0) ypos = 0;
                 vspeed = -vspeed;
             }
         }
