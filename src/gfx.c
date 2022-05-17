@@ -250,8 +250,6 @@ void gfx_set_tile(byte tile, byte x, byte y) {
     tile_index_main_states[tile_offset] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2);
     tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_TILE;
 
-    // printf("tile set at x: %d, y: %d\n", x, y);
-
     _gfx_draw_bitmap_to_bitmap(
         gfx_tileset_buffer,
         gfx_screen_buffer,
@@ -264,12 +262,10 @@ void gfx_set_tile(byte tile, byte x, byte y) {
     );
 }
 
-void _gfx_clear_tile_at_index(byte tile_offset) {
-    byte x = tile_offset % render_tile_width;
-    byte y = tile_offset / render_tile_width;
+void _gfx_clear_tile_at_index(word tile_offset) {
+    word x = tile_offset % render_tile_width;
+    word y = tile_offset / render_tile_width;
     byte tile = tile_index_main[tile_offset];
-
-    // printf("clearing tile at x: %d, y: %d, tile_offset: %d\n", x, y, tile_offset);
 
     _gfx_draw_bitmap_to_bitmap(
         gfx_tileset_buffer,
@@ -347,8 +343,6 @@ void gfx_render_all() {
             }
         }
     }
-
-    // printf("command count: %d, frame: %d\n", gfx_command_count, frame_number);
 
     /* Loop through and execute all commands in display list */
     for (i = 0; i < gfx_command_count; i++) {
