@@ -15,6 +15,13 @@
 unsigned int COSX[256];
 unsigned int SINEY[256];
 
+typedef struct testobj {
+    int hspeed;
+    int vspeed;
+    int xpos;
+    int ypos;
+} testobj;
+
 void init_sin()
 {
   int i;
@@ -261,16 +268,15 @@ int test_pattern_routine(){
 
 int test_tile_routine(){
     word i, j, k;
-    int hspeed = 0;
-    int vspeed = 0;
-    int xpos = 32;
-    int ypos = 0;
-    word bounce = 1;
-    word x = 0, y = 0;
-    byte color = 0;
     gfx_buffer *screen_buffer;
     gfx_buffer *tileset_buffer;
     gfx_buffer *sprite_buffer;
+
+    int testobj_count = 0;
+    int testobj_max = 256;
+
+    testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
+    testobj *cur_testobj;
 
     gfx_init_video();
 
@@ -284,12 +290,6 @@ int test_tile_routine(){
     render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
     render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
 
-    // gfx_draw_bitmap_to_screen(screen_buffer, 0, 0, 0, 0, 336, 256);
-
-    // gfx_blit_screen_buffer();
-    // gfx_render_all();
-    // gfx_mirror_page();
-
     for(i = 0; i < 32; i++)
         gfx_set_tile(0, i % 2, i / 2);
 
@@ -300,34 +300,44 @@ int test_tile_routine(){
     i = 0;
     j = 0;
     k = 0;
-    hspeed = 1;
-    vspeed = 1;
     while (!_kbhit()){
         if(i < 256){
             gfx_set_tile(i, i % 16 + 2, i / 16);
             i++;
         }
         else {
-            gfx_draw_bitmap_to_screen(sprite_buffer, 0, 0, (word) xpos, (word) ypos, 16, 16);
-            xpos += hspeed;
-            ypos += vspeed;
+            for(j = 0; j < testobj_count; j++) {
+                cur_testobj = &testobj_list[j];
+                gfx_draw_bitmap_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos, (word) cur_testobj->ypos, 16, 16);
 
-            if(xpos > 304 || xpos < 0) {
-                if(xpos > 304) xpos = 304;
-                else if(xpos < 0) xpos = 0;
-                hspeed = -hspeed;
+                cur_testobj->xpos += cur_testobj->hspeed;
+                cur_testobj->ypos += cur_testobj->vspeed;
+                if(cur_testobj->xpos > 304 || cur_testobj->xpos < 0) {
+                    if(cur_testobj->xpos > 304) cur_testobj->xpos = 304;
+                    else if(cur_testobj->xpos < 0) cur_testobj->xpos = 0;
+                    cur_testobj->hspeed = -(cur_testobj->hspeed);
+                }
+
+                if(cur_testobj->ypos > 224 || cur_testobj->ypos < 0) {
+                    if(cur_testobj->ypos > 224) cur_testobj->ypos = 224;
+                    else if(cur_testobj->ypos < 0) cur_testobj->ypos = 0;
+                    cur_testobj->vspeed = -(cur_testobj->vspeed);
+                }
             }
-
-            if(ypos > 224 || ypos < 0) {
-                if(ypos > 224) ypos = 224;
-                else if(ypos < 0) ypos = 0;
-                vspeed = -vspeed;
+            if(k++ % 300 == 0){
+                cur_testobj = &testobj_list[testobj_count++];
+                cur_testobj->xpos = rand() % 304;
+                cur_testobj->ypos = rand() % 224;
+                cur_testobj->hspeed = 1 + rand() % 5;
+                cur_testobj->vspeed = 1 + rand() % 5;
             }
         }
         gfx_render_all();
     }
 
     vga_exit_modex();
+
+    printf("total objects rendered: %d", testobj_count);
 
     // free(tile_buffer);
     // free(screen_buffer);
