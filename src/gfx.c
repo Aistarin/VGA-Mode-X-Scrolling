@@ -99,6 +99,15 @@ void _gfx_draw_tile(gfx_draw_command* command) {
     byte tile_index = command->arg0;
     byte scr_tile_index_horz = command->arg1;
     byte scr_tile_index_vert = command->arg2;
+    
+    vga_blit_vram_to_vram(
+        (tile_index % render_tile_width) * TILE_WIDTH,
+        PAGE_HEIGHT * 2 + (tile_index / render_tile_width) * TILE_HEIGHT,
+        scr_tile_index_horz * TILE_WIDTH,
+        current_render_page_offset + scr_tile_index_vert * TILE_HEIGHT,
+        TILE_WIDTH,
+        TILE_HEIGHT
+    );
 }
 
 /**
@@ -305,6 +314,23 @@ void gfx_init_video() {
     tile_index_page_2_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
 }
 
+/* this loads the tileset into the VRAM after the two pages */
+void gfx_load_tileset() {
+    word i;
+    for(i = 0; i < 256; i++)
+        vga_blit_buffer_to_vram(
+            gfx_tileset_buffer->buffer,
+            gfx_tileset_buffer->width,
+            gfx_tileset_buffer->height,
+            (i % TILE_WIDTH) * TILE_WIDTH,
+            (i / TILE_WIDTH) * TILE_HEIGHT,
+            (i % render_tile_width) * TILE_WIDTH,
+            PAGE_HEIGHT * 2 + (i / render_tile_width) * TILE_HEIGHT,
+            TILE_WIDTH,
+            TILE_HEIGHT
+        );
+}
+
 /**
  * Main rendering call
  **/
@@ -334,7 +360,7 @@ void gfx_render_all() {
             }
             else if (main_tile_state & GFX_TILE_STATE_TILE){
                 /* fast blit cached tile to page */
-                _gfx_add_command_to_display_list(GFX_BLIT_TILES, x, y, 0);
+                _gfx_add_command_to_display_list(GFX_DRAW_TILE, main_tile, x, y);
             }
 
             /* decrement dirty persistent count by 1 */

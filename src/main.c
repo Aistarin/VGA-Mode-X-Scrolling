@@ -290,6 +290,8 @@ int test_tile_routine(){
     render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
     render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
 
+    gfx_load_tileset();
+
     for(i = 0; i < 32; i++)
         gfx_set_tile(0, i % 2, i / 2);
 
