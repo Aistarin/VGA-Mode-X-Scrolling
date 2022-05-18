@@ -324,7 +324,7 @@ int test_tile_routine(){
                     cur_testobj->vspeed = -(cur_testobj->vspeed);
                 }
             }
-            if(k++ % 300 == 0){
+            if(k++ % 30 == 0 && testobj_count < testobj_max){
                 cur_testobj = &testobj_list[testobj_count++];
                 cur_testobj->xpos = rand() % 304;
                 cur_testobj->ypos = rand() % 224;
@@ -337,7 +337,7 @@ int test_tile_routine(){
 
     vga_exit_modex();
 
-    printf("total objects rendered: %d", testobj_count);
+    printf("total objects rendered: %d\n", testobj_count);
 
     // free(tile_buffer);
     // free(screen_buffer);
