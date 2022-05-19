@@ -312,6 +312,7 @@ void gfx_init_video() {
     tile_index_main = calloc(render_tile_width * render_tile_height, sizeof(byte));
     tile_index_main_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
     dirty_tile_buffer = malloc(sizeof(word) * render_tile_count);
+    dirty_sprite_tile_buffer = malloc(sizeof(word) * render_tile_count);
 }
 
 /* this loads the tileset into the VRAM after the two pages */
@@ -486,13 +487,15 @@ void gfx_render_all_test() {
     for(i = 0; i < render_tile_count; i++) {
         current_tile_state = tile_index_main_states[i];
         if(current_tile_state & (GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2)){
-            if(current_tile_state & GFX_TILE_STATE_SPRITE)
+            if(current_tile_state & GFX_TILE_STATE_SPRITE) {
                 /* tiles inserted front-to-back */
                 dirty_sprite_tile_buffer[dirty_sprite_tile_count++] = i;
-            else if (current_tile_state & GFX_TILE_STATE_TILE)
+            }
+            else if (current_tile_state & GFX_TILE_STATE_TILE) {
                 /* these tiles can be inserted back-to-front since buffer size
                    will never exceed the total tiles on screen */
                 dirty_tile_buffer[dirty_tile_count++] = i;
+            }
 
             /* decrement dirty persistent count by 1 */
             if(current_render_page)
@@ -500,7 +503,7 @@ void gfx_render_all_test() {
         }
     }
 
-    // _gfx_blit_dirty_tiles();
+    _gfx_blit_dirty_tiles();
 
     /* page flip + scrolling */
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
