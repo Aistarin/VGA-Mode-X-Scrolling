@@ -8,6 +8,7 @@ word render_page_width;                 // rendering page width (visible + non-v
 word render_page_height;                // rendering page height (visible + non-visible, in pixels)
 byte render_tile_width;                 // rendering page width (in tiles)
 byte render_tile_height;                // rendering page height (in tiles)
+word render_tile_count;                 // total render tile count
 
 byte current_render_page = 0;           // current page displayed
 word current_render_page_offset = 0;    // current page offset in VRAM
@@ -22,6 +23,11 @@ byte *tile_index_main_states;           // states for all main tile indexes
 gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be drawn in order
 word gfx_command_count = 0;             // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
+
+word *dirty_tile_buffer;                // buffer of all dirty tiles to be vram-to-vram blitted
+word dirty_tile_count = 0;              // number of dirty tiles to be vram-to-vram blitted
+word *dirty_sprite_tile_buffer;         // buffer of all dirty tiles to be main memory-to-vram blitted
+word dirty_sprite_tile_count = 0;            // number of dirty tiles to be main memory-to-vram blitted
 
 int frame_number = 0;
 
@@ -237,6 +243,7 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
     int tile_offset;
     /* TODO: looks like theres's a bug where tiles aligned to the grid still mark
        the surrounding tiles as dirty, please double check! */
+    /* TODO: LOOK INTO THIS!!! ^ */
     for(y = tile_min_y; y <= tile_max_y; y++)
         for(x = tile_min_x; x <= tile_max_x; x++){
             tile_offset = ((int) y * (int) render_tile_width) + (int) x;
@@ -298,11 +305,13 @@ void gfx_init_video() {
 
     render_tile_width = render_page_width / TILE_WIDTH;
     render_tile_height = render_page_height / TILE_HEIGHT;
-    gfx_command_count_max = (word) render_tile_width * (word) render_tile_height;
+    render_tile_count = (word) render_tile_width * (word) render_tile_height;
+    gfx_command_count_max = render_tile_count;
     // display list buffer size determined by max number of tiles on-screen
     gfx_display_list = malloc(sizeof(gfx_draw_command) * gfx_command_count_max);
     tile_index_main = calloc(render_tile_width * render_tile_height, sizeof(byte));
     tile_index_main_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
+    dirty_tile_buffer = malloc(sizeof(word) * render_tile_count);
 }
 
 /* this loads the tileset into the VRAM after the two pages */
@@ -327,7 +336,7 @@ void gfx_load_tileset() {
  **/
 void gfx_render_all() {
     int i;
-    byte x, y, main_tile_state, current_page_tile_state, main_tile, current_page_tile;
+    byte x, y, main_tile_state, main_tile;
     gfx_draw_command *cur_command;
 
     /* switch to offscreen rendering page */
@@ -396,4 +405,114 @@ void gfx_render_all() {
             tile_index_main_states[i] &= ~GFX_TILE_STATE_SPRITE;
         }
     }
+}
+
+void _gfx_blit_dirty_tiles() {
+    byte plane, tile_index;
+    word current_tile;
+    dword x, y, i, offset, tile_offset;
+    byte *screen_buffer = gfx_screen_buffer->buffer;
+    byte *VGA = (byte *) 0xA0000;
+    int line;
+
+    // pixel variable made volatile to prevent the compiler from
+    // optimizing it out, since value is actually not used
+    volatile byte pixel;
+
+    // for(plane = 0; plane < 4; plane++) {
+    //     // select one plane at a time
+    //     outp(SC_INDEX, MAP_MASK);
+    //     outp(SC_DATA, 1 << plane);
+
+    //     for(i = 0; i < dirty_sprite_count; i++) {
+    //         current_tile = dirty_tile_buffer[i];
+    //         x = (current_tile % render_tile_width) * TILE_WIDTH + plane;
+    //         y = (current_tile / render_tile_width) * TILE_HEIGHT;
+    //         for(y; y < TILE_HEIGHT; y++) {
+    //             for(x; x < TILE_WIDTH; x += 4) {
+    //                 // TODO: this could probably be reimplemented to be
+    //                 // much cache-friendlier by having/assuming that the
+    //                 // data in the buffer is already sorted by plane,
+    //                 // that way we could just use memcpy to copy an
+    //                 // entire plane's worth of data to VRAM in one go
+    //                 offset = (dword) y * render_page_width + x;
+    //                 VGA[(word) offset >> 2] = screen_buffer[offset];
+    //             }
+    //         }
+    //     }
+    // }
+
+    outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK);      //select all planes
+    outpw(GC_INDEX, 0x08);                              //set to or mode
+
+    for(i = 0; i < dirty_tile_count; i++) {
+        current_tile = dirty_tile_buffer[i];
+        tile_index = tile_index_main[current_tile];
+        x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
+        y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
+        // vga_blit_vram_to_vram(
+        //     (word) (tile_index % render_tile_width) * TILE_WIDTH,
+        //     PAGE_HEIGHT * 2 + (word) (tile_index / render_tile_width) * TILE_HEIGHT,
+        //     x,
+        //     current_render_page_offset + y,
+        //     TILE_WIDTH,
+        //     TILE_HEIGHT
+        // );
+        offset = ((y + current_render_page_offset) * PAGE_WIDTH + x) >> 2;
+        x = (word) (tile_index % render_tile_width) * TILE_WIDTH;
+        y = (word) (tile_index / render_tile_width) * TILE_HEIGHT;
+        tile_offset = ((y + PAGE_HEIGHT * 2) * PAGE_WIDTH + x) >> 2;
+        for(y = 0; y < TILE_HEIGHT; y++) {
+            for(x = 0; x < TILE_WIDTH >> 2; x++) {
+                pixel = VGA[tile_offset + x];           //read pixel to load the latches
+                VGA[offset + x] = 0;                    //write four pixels
+            }
+            tile_offset += PAGE_WIDTH >> 2;
+            offset += PAGE_WIDTH >> 2;
+        }
+    }
+
+    outpw(GC_INDEX + 1, 0x0ff);
+}
+
+void gfx_render_all_test() {
+    int i, j;
+    byte current_tile, current_tile_state;
+
+    /* switch to offscreen rendering page */
+    current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
+
+    /* queue all of the dirty tiles in the main memory buffer */
+    for(i = 0; i < render_tile_count; i++) {
+        current_tile_state = tile_index_main_states[i];
+        if(current_tile_state & (GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2)){
+            if(current_tile_state & GFX_TILE_STATE_SPRITE)
+                /* tiles inserted front-to-back */
+                dirty_sprite_tile_buffer[dirty_sprite_tile_count++] = i;
+            else if (current_tile_state & GFX_TILE_STATE_TILE)
+                /* these tiles can be inserted back-to-front since buffer size
+                   will never exceed the total tiles on screen */
+                dirty_tile_buffer[dirty_tile_count++] = i;
+
+            /* decrement dirty persistent count by 1 */
+            if(current_render_page)
+                tile_index_main_states[i] = --current_tile_state;
+        }
+    }
+
+    // _gfx_blit_dirty_tiles();
+
+    /* page flip + scrolling */
+    vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
+
+    /* clear tiles on which sprites have been rendered to */
+    for(i = 0; i < dirty_sprite_tile_count; i++)
+        tile_index_main_states[dirty_sprite_tile_buffer[i]] &= ~GFX_TILE_STATE_SPRITE;
+
+    /* clear dirty tile buffer once rendering has finished */
+    dirty_tile_count = 0;
+    dirty_sprite_tile_count = 0;
+
+    current_render_page = 1 - current_render_page;
+    frame_number++;
 }
