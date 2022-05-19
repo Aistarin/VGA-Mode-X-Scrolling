@@ -266,14 +266,13 @@ int test_pattern_routine(){
     return 0;
 }
 
-int test_tile_routine(){
+int test_tile_routine(int testobj_max){
     word i, j, k;
     gfx_buffer *screen_buffer;
     gfx_buffer *tileset_buffer;
     gfx_buffer *sprite_buffer;
 
     int testobj_count = 0;
-    int testobj_max = 256;
 
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
@@ -326,7 +325,7 @@ int test_tile_routine(){
                     cur_testobj->vspeed = -(cur_testobj->vspeed);
                 }
             }
-            if(k++ % 300 == 0 && testobj_count < testobj_max){
+            if(k++ % 30 == 0 && testobj_count < testobj_max){
                 cur_testobj = &testobj_list[testobj_count++];
                 cur_testobj->xpos = rand() % 312;
                 cur_testobj->ypos = rand() % 232;
@@ -347,6 +346,12 @@ int test_tile_routine(){
     return 0;
 }
 
-int main() {
-    return test_tile_routine();
+int main(int argc, char *argv[]) {
+    char *a = argv[1];
+    int num = atoi(a);
+
+    if(argc >= 2)
+        return test_tile_routine(num);
+    else
+        return test_tile_routine(256);
 }

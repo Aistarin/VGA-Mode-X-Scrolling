@@ -241,9 +241,6 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
     byte tile_max_x = MIN((dest_x + width) / TILE_WIDTH, render_tile_width);
     byte tile_max_y = MIN((dest_y + height) / TILE_HEIGHT, render_tile_height);
     int tile_offset;
-    /* TODO: looks like theres's a bug where tiles aligned to the grid still mark
-       the surrounding tiles as dirty, please double check! */
-    /* TODO: LOOK INTO THIS!!! ^ */
     for(y = tile_min_y; y <= tile_max_y; y++)
         for(x = tile_min_x; x <= tile_max_x; x++){
             tile_offset = ((int) y * (int) render_tile_width) + (int) x;
@@ -411,7 +408,7 @@ void gfx_render_all() {
 void _gfx_blit_dirty_tiles() {
     byte plane, tile_index;
     word current_tile;
-    dword x, y, i, offset, tile_offset;
+    dword x, y, i, vga_offset, tile_offset, dest_x, dest_y, source_x, source_y;
     byte *screen_buffer = gfx_screen_buffer->buffer;
     byte *VGA = (byte *) 0xA0000;
     int line;
@@ -420,28 +417,36 @@ void _gfx_blit_dirty_tiles() {
     // optimizing it out, since value is actually not used
     volatile byte pixel;
 
-    // for(plane = 0; plane < 4; plane++) {
-    //     // select one plane at a time
-    //     outp(SC_INDEX, MAP_MASK);
-    //     outp(SC_DATA, 1 << plane);
+    for(plane = 0; plane < 4; plane++) {
+        // select one plane at a time
+        outp(SC_INDEX, MAP_MASK);
+        outp(SC_DATA, 1 << plane);
 
-    //     for(i = 0; i < dirty_sprite_count; i++) {
-    //         current_tile = dirty_tile_buffer[i];
-    //         x = (current_tile % render_tile_width) * TILE_WIDTH + plane;
-    //         y = (current_tile / render_tile_width) * TILE_HEIGHT;
-    //         for(y; y < TILE_HEIGHT; y++) {
-    //             for(x; x < TILE_WIDTH; x += 4) {
-    //                 // TODO: this could probably be reimplemented to be
-    //                 // much cache-friendlier by having/assuming that the
-    //                 // data in the buffer is already sorted by plane,
-    //                 // that way we could just use memcpy to copy an
-    //                 // entire plane's worth of data to VRAM in one go
-    //                 offset = (dword) y * render_page_width + x;
-    //                 VGA[(word) offset >> 2] = screen_buffer[offset];
-    //             }
-    //         }
-    //     }
-    // }
+        for(i = 0; i < dirty_sprite_tile_count; i++) {
+            current_tile = dirty_sprite_tile_buffer[i];
+            // x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
+            // y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
+            // vga_offset = ((dword) (current_render_page_offset + y) * PAGE_WIDTH + x) >> 2;
+            // tile_offset = PAGE_WIDTH * y + x;
+            // for(y = 0; y < TILE_HEIGHT; y++) {
+            //     for(x = plane; x < TILE_WIDTH; x += 4) {
+            //         VGA[vga_offset] = screen_buffer[tile_offset + x];
+            //     }
+            //     tile_offset += PAGE_WIDTH;
+            //     vga_offset += PAGE_WIDTH >> 2;
+            // }
+            source_x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
+            source_y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
+            dest_x = source_x;
+            dest_y = source_y + current_render_page_offset;
+            for(y = 0; y < TILE_HEIGHT; y++) {
+                for(x = plane; x < TILE_WIDTH; x += 4) {
+                    vga_offset = ((dword) (dest_y + y) * PAGE_WIDTH + (dest_x + x)) >> 2;
+                    VGA[(word)vga_offset]=screen_buffer[PAGE_WIDTH * (source_y + y) + (source_x + x)];
+                }
+            }
+        }
+    }
 
     outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK);      //select all planes
     outpw(GC_INDEX, 0x08);                              //set to or mode
@@ -451,25 +456,17 @@ void _gfx_blit_dirty_tiles() {
         tile_index = tile_index_main[current_tile];
         x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
         y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
-        // vga_blit_vram_to_vram(
-        //     (word) (tile_index % render_tile_width) * TILE_WIDTH,
-        //     PAGE_HEIGHT * 2 + (word) (tile_index / render_tile_width) * TILE_HEIGHT,
-        //     x,
-        //     current_render_page_offset + y,
-        //     TILE_WIDTH,
-        //     TILE_HEIGHT
-        // );
-        offset = ((y + current_render_page_offset) * PAGE_WIDTH + x) >> 2;
+        vga_offset = ((y + current_render_page_offset) * PAGE_WIDTH + x) >> 2;
         x = (word) (tile_index % render_tile_width) * TILE_WIDTH;
         y = (word) (tile_index / render_tile_width) * TILE_HEIGHT;
         tile_offset = ((y + PAGE_HEIGHT * 2) * PAGE_WIDTH + x) >> 2;
         for(y = 0; y < TILE_HEIGHT; y++) {
             for(x = 0; x < TILE_WIDTH >> 2; x++) {
                 pixel = VGA[tile_offset + x];           //read pixel to load the latches
-                VGA[offset + x] = 0;                    //write four pixels
+                VGA[vga_offset + x] = 0;                //write four pixels
             }
             tile_offset += PAGE_WIDTH >> 2;
-            offset += PAGE_WIDTH >> 2;
+            vga_offset += PAGE_WIDTH >> 2;
         }
     }
 
