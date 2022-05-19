@@ -475,7 +475,8 @@ void _gfx_blit_dirty_tiles() {
 
 void gfx_render_all_test() {
     int i, j;
-    byte current_tile, current_tile_state;
+    word current_tile_index;
+    byte current_tile_state;
 
     /* switch to offscreen rendering page */
     current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
@@ -495,8 +496,7 @@ void gfx_render_all_test() {
             }
 
             /* decrement dirty persistent count by 1 */
-            if(current_render_page)
-                tile_index_main_states[i] = --current_tile_state;
+            tile_index_main_states[i] = --current_tile_state;
         }
     }
 
@@ -506,8 +506,12 @@ void gfx_render_all_test() {
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
 
     /* clear tiles on which sprites have been rendered to */
-    for(i = 0; i < dirty_sprite_tile_count; i++)
-        tile_index_main_states[dirty_sprite_tile_buffer[i]] &= ~GFX_TILE_STATE_SPRITE;
+    for(i = 0; i < dirty_sprite_tile_count; i++) {
+        current_tile_index = dirty_sprite_tile_buffer[i];
+        _gfx_clear_tile_at_index(current_tile_index);
+        tile_index_main_states[current_tile_index] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE);
+        tile_index_main_states[current_tile_index] |= GFX_TILE_STATE_DIRTY_2;
+    }
 
     /* clear dirty tile buffer once rendering has finished */
     dirty_tile_count = 0;
