@@ -18,12 +18,7 @@ gfx_buffer *gfx_screen_buffer;          // main memory representation of current
 gfx_buffer *gfx_tileset_buffer;         // main memory representation of current tileset
 
 byte *tile_index_main;                  // tile index for main memory screen buffer
-byte *tile_index_page_1;                // tile index for VRAM page 1
-byte *tile_index_page_2;                // tile index for VRAM page 2
 byte *tile_index_main_states;           // states for all main tile indexes
-byte *tile_index_page_1_states;         // states for all page 1 tile indexes
-byte *tile_index_page_2_states;         // states for all page 2 tile indexes
-
 gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be drawn in order
 word gfx_command_count = 0;             // number of commands currently in display list
 word gfx_command_count_max;             // maximum number of commands that can be put in the display list
@@ -307,11 +302,7 @@ void gfx_init_video() {
     // display list buffer size determined by max number of tiles on-screen
     gfx_display_list = malloc(sizeof(gfx_draw_command) * gfx_command_count_max);
     tile_index_main = calloc(render_tile_width * render_tile_height, sizeof(byte));
-    tile_index_page_1 = calloc(render_tile_width * render_tile_height, sizeof(byte));
-    tile_index_page_2 = calloc(render_tile_width * render_tile_height, sizeof(byte));
     tile_index_main_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
-    tile_index_page_1_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
-    tile_index_page_2_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
 }
 
 /* this loads the tileset into the VRAM after the two pages */
@@ -338,13 +329,9 @@ void gfx_render_all() {
     int i;
     byte x, y, main_tile_state, current_page_tile_state, main_tile, current_page_tile;
     gfx_draw_command *cur_command;
-    byte *current_tile_index;
-    byte *current_tile_states;
 
     /* switch to offscreen rendering page */
     current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
-    current_tile_index = current_render_page ? tile_index_page_2 : tile_index_page_1;
-    current_tile_states = current_render_page ? tile_index_page_2_states : tile_index_page_1_states;
 
     for(i = 0; i < render_tile_width * render_tile_height; i++){
         main_tile = tile_index_main[i];
