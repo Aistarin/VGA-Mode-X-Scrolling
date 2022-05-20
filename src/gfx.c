@@ -292,6 +292,7 @@ void _gfx_clear_tile_at_index(word tile_offset) {
  **/
 void gfx_init_video() {
     vga_init_modex();
+    vga_wait_for_retrace();
     vga_scroll_offset(0, 0);
     render_page_width = PAGE_WIDTH;
     render_page_height = PAGE_HEIGHT;
@@ -336,6 +337,8 @@ void gfx_render_all() {
     int i;
     byte x, y, main_tile_state, main_tile;
     gfx_draw_command *cur_command;
+
+    vga_wait_for_retrace();
 
     /* switch to offscreen rendering page */
     current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
@@ -435,6 +438,7 @@ void _gfx_blit_dirty_tiles() {
             //     tile_offset += PAGE_WIDTH;
             //     vga_offset += PAGE_WIDTH >> 2;
             // }
+            /* TODO: this could be optimized better to use less variables */
             source_x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
             source_y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
             dest_x = source_x;
@@ -451,6 +455,7 @@ void _gfx_blit_dirty_tiles() {
     outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK);      //select all planes
     outpw(GC_INDEX, 0x08);                              //set to or mode
 
+    /* TODO: this could be optimized better to use less variables */
     for(i = 0; i < dirty_tile_count; i++) {
         current_tile = dirty_tile_buffer[i];
         tile_index = tile_index_main[current_tile];
@@ -477,6 +482,8 @@ void gfx_render_all_test() {
     int i, j;
     word current_tile_index;
     byte current_tile_state;
+
+    vga_wait_for_retrace();
 
     /* switch to offscreen rendering page */
     current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;

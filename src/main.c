@@ -294,8 +294,8 @@ int test_tile_routine(int testobj_max){
     for(i = 0; i < 32; i++)
         gfx_set_tile(0, i % 2, i / 2);
 
-    for(i = 0; i < 32; i++)
-        gfx_set_tile(0, i % 2 + 18, i / 2);
+    for(i = 0; i < 48; i++)
+        gfx_set_tile(0, i % 3 + 18, i / 3);
 
     // main program loop
     i = 0;
@@ -346,6 +346,33 @@ int test_tile_routine(int testobj_max){
     return 0;
 }
 
+int test_vga(){
+    int i, j, index;
+    byte palette[256*3];
+
+    gfx_init_video();
+
+    index = 1;
+
+    palette[(int)(index*3+2)] = 255;
+    palette[(int)(index*3+1)] = 0;
+    palette[(int)(index*3+0)] = 0;
+
+    vga_set_palette(palette, 0, 255);
+
+    for(i=0;i<PAGE_WIDTH;i++)
+        for(j=0;j<PAGE_HEIGHT;j++)
+            vga_draw_pixel(i, j, 1);
+
+    while (!_kbhit()){
+        vga_wait_for_retrace();
+    }
+
+    vga_exit_modex();
+
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     char *a = argv[1];
     int num = atoi(a);
@@ -354,4 +381,6 @@ int main(int argc, char *argv[]) {
         return test_tile_routine(num);
     else
         return test_tile_routine(256);
+
+    // return test_vga();
 }

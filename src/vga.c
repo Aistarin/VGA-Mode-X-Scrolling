@@ -19,24 +19,21 @@ void vga_init_modex()
 {
     // initialize mode 13h
     vga_set_mode(0x13);
-    /* disable chain 4 */
-    outp( SC_INDEX, 0x04 );
-    outp( SC_DATA, 0x06 );
 
-    // set map mask to all 4 planes
-    outpw(SC_INDEX, 0xff02);
+    // clear memory
+    memset(VGA, 0, 0xFFFF);
+
+    /* disable chain 4 */
+    word_out(SC_INDEX, 0x04, 0x06);
+
+    /* disable word mode */
+    word_out(CRTC_INDEX, 0x17, 0xe3);
 
     /* disable doubleword mode */
-    outp( CRTC_INDEX, 0x14 );
-    outp( CRTC_DATA, 0x00 );
-    /* disable word mode */
-    outp( CRTC_INDEX, 0x17 );
-    outp( CRTC_DATA, 0xe3 );
+    word_out(CRTC_INDEX, 0x14, 0x00);
 
     // turn off write protect
     word_out(CRTC_INDEX, V_RETRACE_END, 0x2c);
-
-    // outp(0x03c2, 0xe3);
 
 	//320x240 60Hz
     word_out(CRTC_INDEX, V_TOTAL, 0x0d);
@@ -49,17 +46,6 @@ void vga_init_modex()
 
     // set logical width of page
     word_out(CRTC_INDEX, V_OFFSET, PAGE_WIDTH >> 3);
-
-    // set vertical retrace back to normal
-    word_out(CRTC_INDEX, V_RETRACE_END, 0x8e);
-
-    /* clear all VGA mem */
-    outp( SC_INDEX, 0x02 );
-    outp( SC_DATA, 0xff );
-
-    /* write 2^16 nulls */
-    memset( VGA + 0x0000, 0, 0x8000 ); /* 0x10000 / 2 = 0x8000 */
-    memset( VGA + 0x8000, 0, 0x8000 ); /* 0x10000 / 2 = 0x8000 */
 }
 
 void vga_wait_for_retrace(){
@@ -158,20 +144,18 @@ void vga_scroll_offset(word offset_x, word offset_y)
     outpw(CRTC_INDEX, 0x0D | (y << 8));  // low address
     outpw(CRTC_INDEX, 0x0C | (y & 0xff00));  // high address
 
-    vga_wait_for_retrace();
-
     // _disable();
 
-    inp( 0x03DA );
+    inp(0x03da);
     ac = inp(AC_INDEX);
 
 	//pixel panning value		
-	outpw(AC_INDEX, 0X33);
-	outpw(AC_INDEX, p[x & 3]);
+	outp(AC_INDEX, 0x33);
+	outp(AC_INDEX, p[x & 3]);
 
     // _enable();
 
-    outp(AC_INDEX,ac);
+    // outp(AC_INDEX, ac);
 }
 
 void vga_blit_vram_to_vram(word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
