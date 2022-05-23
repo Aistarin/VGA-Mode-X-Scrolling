@@ -28,7 +28,9 @@ word dirty_sprite_tile_count = 0;       // number of dirty tiles to be main memo
 
 int frame_number = 0;
 
-struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height) {
+int plane_select[7] = {0,1,2,3,0,1,2};
+
+struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar) {
     struct gfx_buffer* empty_buffer;
     int buffer_size = (int) width * (int) height;
 
@@ -38,12 +40,14 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
     empty_buffer = malloc(sizeof(struct gfx_buffer) + (sizeof(byte) * buffer_size));
 
     empty_buffer->buffer_size = buffer_size;
-    empty_buffer->is_planar = 0;
+    empty_buffer->is_planar = is_planar;
     empty_buffer->width = width;
     empty_buffer->height = height;
 
     /* bitmap buffer is memory immediately after main struct */
     empty_buffer->buffer = (byte *) empty_buffer + sizeof(struct gfx_buffer);
+
+    memset(empty_buffer->buffer, 0, empty_buffer->buffer_size);
 
     return empty_buffer;
 }
@@ -104,7 +108,7 @@ void gfx_mirror_page() {
     );
 }
 
-void _gfx_draw_bitmap_to_bitmap(
+void _gfx_draw_linear_bitmap_to_linear_bitmap(
     gfx_buffer *source_bitmap,
     gfx_buffer *dest_bitmap,
     word source_x,
@@ -131,6 +135,40 @@ void _gfx_draw_bitmap_to_bitmap(
     }
 }
 
+void _gfx_draw_linear_bitmap_to_planar_bitmap(
+    gfx_buffer *source_bitmap,
+    gfx_buffer *dest_bitmap,
+    word source_x,
+    word source_y,
+    word dest_x,
+    word dest_y,
+    word width,
+    word height
+) {
+    byte *dest_buffer = dest_bitmap->buffer;
+    word dest_buffer_width = dest_bitmap->width;
+    word dest_buffer_height = dest_bitmap->height;
+    byte *source_buffer = source_bitmap->buffer;
+    word source_buffer_width = source_bitmap->width;
+    word source_buffer_height = source_bitmap->height;
+    int x, y, i, plane, offset, plane_offset;
+    int max_x = MIN(dest_buffer_width, dest_x + width);
+    int max_y = MIN(dest_buffer_height, dest_y + height);
+    int max_width = max_x - dest_x;
+    int max_height = max_y - dest_y;
+
+    for(i = 0; i < 4; i++) {
+        plane = plane_select[(dest_x % 4) + i];
+        plane_offset = (dest_bitmap->buffer_size >> 2) * plane;
+        for(y = 0; y < height; y++) {
+            for(x = plane; x < width; x += 4) {
+                offset = ((dword) (dest_y + y) * PAGE_WIDTH + (dest_x + x)) >> 2;
+                dest_buffer[plane_offset + offset]=source_buffer[source_buffer_width * (source_y + y) + (source_x + x)];
+            }
+        }
+    }
+}
+
 void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
     byte x, y;
     byte tile_min_x = dest_x / TILE_WIDTH;
@@ -144,7 +182,11 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
             tile_index_main_states[tile_offset] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2);
             tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE;
         };
-    _gfx_draw_bitmap_to_bitmap(bitmap, gfx_screen_buffer, source_x, source_y, dest_x, dest_y, width, height);
+
+    if(!(bitmap->is_planar && gfx_screen_buffer->is_planar))
+        _gfx_draw_linear_bitmap_to_linear_bitmap(bitmap, gfx_screen_buffer, source_x, source_y, dest_x, dest_y, width, height);
+    else if(!bitmap->is_planar && gfx_screen_buffer->is_planar)
+        _gfx_draw_linear_bitmap_to_planar_bitmap(bitmap, gfx_screen_buffer, source_x, source_y, dest_x, dest_y, width, height);
 }
 
 void gfx_set_tile(byte tile, byte x, byte y) {
@@ -155,7 +197,7 @@ void gfx_set_tile(byte tile, byte x, byte y) {
     tile_index_main_states[tile_offset] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2);
     tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_TILE;
 
-    _gfx_draw_bitmap_to_bitmap(
+    _gfx_draw_linear_bitmap_to_planar_bitmap(
         gfx_tileset_buffer,
         gfx_screen_buffer,
         (tile % TILE_WIDTH) * TILE_WIDTH,
@@ -172,7 +214,7 @@ void _gfx_clear_tile_at_index(word tile_offset) {
     word y = tile_offset / render_tile_width;
     byte tile = tile_index_main[tile_offset];
 
-    _gfx_draw_bitmap_to_bitmap(
+    _gfx_draw_linear_bitmap_to_planar_bitmap(
         gfx_tileset_buffer,
         gfx_screen_buffer,
         (tile % TILE_WIDTH) * TILE_WIDTH,
@@ -193,10 +235,10 @@ void gfx_init_video() {
     vga_scroll_offset(0, 0);
     render_page_width = PAGE_WIDTH;
     render_page_height = PAGE_HEIGHT;
-    gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height);
+    gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height, TRUE);
 
     /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
-    gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16);
+    gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE);
 
     render_tile_width = render_page_width / TILE_WIDTH;
     render_tile_height = render_page_height / TILE_HEIGHT;
@@ -224,6 +266,22 @@ void gfx_load_tileset() {
             TILE_WIDTH,
             TILE_HEIGHT
         );
+}
+
+void _gfx_blit_planar_screen() {
+    int plane, offset = 0;
+    int initial_offset = (current_render_page_offset * PAGE_WIDTH) >> 2;
+    int buffer_size = gfx_screen_buffer->buffer_size >> 2;
+    byte *screen_buffer = gfx_screen_buffer->buffer;
+    byte *VGA = (byte *) 0xA0000;
+
+    for(plane = 0; plane < 4; plane++) {
+        // select one plane at a time
+        outp(SC_INDEX, MAP_MASK);
+        outp(SC_DATA, 1 << plane);
+        memcpy(&VGA[initial_offset], &screen_buffer[offset], buffer_size);
+        offset += buffer_size;
+    }
 }
 
 void _gfx_blit_dirty_tiles() {
@@ -328,7 +386,10 @@ void gfx_render_all() {
         }
     }
 
-    _gfx_blit_dirty_tiles();
+    // _gfx_blit_dirty_tiles();
+
+    _gfx_blit_planar_screen();
+    // gfx_blit_screen_buffer();
 
     /* page flip + scrolling */
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);

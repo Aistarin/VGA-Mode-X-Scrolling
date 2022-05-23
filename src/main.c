@@ -279,9 +279,9 @@ int test_tile_routine(int testobj_max){
 
     gfx_init_video();
 
-    screen_buffer = gfx_create_empty_buffer(0, 336, 256);
+    screen_buffer = gfx_create_empty_buffer(0, 336, 256, FALSE);
     tileset_buffer = gfx_get_tileset_buffer();
-    sprite_buffer = gfx_create_empty_buffer(0, 8, 8);
+    sprite_buffer = gfx_create_empty_buffer(0, 16, 16, FALSE);
 
     for(i=0;i<sprite_buffer->width * sprite_buffer->height;i++)
         sprite_buffer->buffer[i] = 15;
@@ -313,22 +313,22 @@ int test_tile_routine(int testobj_max){
 
                 cur_testobj->xpos += cur_testobj->hspeed;
                 cur_testobj->ypos += cur_testobj->vspeed;
-                if(cur_testobj->xpos > 312 || cur_testobj->xpos < 0) {
-                    if(cur_testobj->xpos > 312) cur_testobj->xpos = 312;
+                if(cur_testobj->xpos > (320 - sprite_buffer->width) || cur_testobj->xpos < 0) {
+                    if(cur_testobj->xpos > (320 - sprite_buffer->width)) cur_testobj->xpos = (320 - sprite_buffer->width);
                     else if(cur_testobj->xpos < 0) cur_testobj->xpos = 0;
                     cur_testobj->hspeed = -(cur_testobj->hspeed);
                 }
 
-                if(cur_testobj->ypos > 232 || cur_testobj->ypos < 0) {
-                    if(cur_testobj->ypos > 232) cur_testobj->ypos = 232;
+                if(cur_testobj->ypos > (240 - sprite_buffer->height) || cur_testobj->ypos < 0) {
+                    if(cur_testobj->ypos > (240 - sprite_buffer->height)) cur_testobj->ypos = (240 - sprite_buffer->height);
                     else if(cur_testobj->ypos < 0) cur_testobj->ypos = 0;
                     cur_testobj->vspeed = -(cur_testobj->vspeed);
                 }
             }
             if(k++ % 30 == 0 && testobj_count < testobj_max){
                 cur_testobj = &testobj_list[testobj_count++];
-                cur_testobj->xpos = rand() % 312;
-                cur_testobj->ypos = rand() % 232;
+                cur_testobj->xpos = rand() % (320 - sprite_buffer->width);
+                cur_testobj->ypos = rand() % (240 - sprite_buffer->height);
                 cur_testobj->hspeed = 1 + rand() % 5;
                 cur_testobj->vspeed = 1 + rand() % 5;
             }
