@@ -333,7 +333,7 @@ int test_tile_routine(int testobj_max){
                 cur_testobj->vspeed = 1 + rand() % 5;
             }
         }
-        gfx_render_all_test();
+        gfx_render_all();
     }
 
     vga_exit_modex();

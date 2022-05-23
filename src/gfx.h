@@ -56,7 +56,6 @@ void gfx_set_tile(byte tile, byte x, byte y);
 void gfx_blit_screen_buffer();
 void gfx_mirror_page();
 void gfx_render_all();
-void gfx_render_all_test();
 void gfx_load_tileset();
 void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 

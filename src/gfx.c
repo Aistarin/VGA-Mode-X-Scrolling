@@ -20,14 +20,11 @@ gfx_buffer *gfx_tileset_buffer;         // main memory representation of current
 
 byte *tile_index_main;                  // tile index for main memory screen buffer
 byte *tile_index_main_states;           // states for all main tile indexes
-gfx_draw_command *gfx_display_list;     // buffer of all draw commands to be drawn in order
-word gfx_command_count = 0;             // number of commands currently in display list
-word gfx_command_count_max;             // maximum number of commands that can be put in the display list
 
 word *dirty_tile_buffer;                // buffer of all dirty tiles to be vram-to-vram blitted
 word dirty_tile_count = 0;              // number of dirty tiles to be vram-to-vram blitted
 word *dirty_sprite_tile_buffer;         // buffer of all dirty tiles to be main memory-to-vram blitted
-word dirty_sprite_tile_count = 0;            // number of dirty tiles to be main memory-to-vram blitted
+word dirty_sprite_tile_count = 0;       // number of dirty tiles to be main memory-to-vram blitted
 
 int frame_number = 0;
 
@@ -68,143 +65,43 @@ gfx_buffer* gfx_get_tileset_buffer() {
 }
 
 /**
- * GRAPHICS COMMAND HANDLERS
- * 
- * These are the commands that map the graphics engine's
- * drawing commands to hardware-specific ones
- **/
-
-/**
- * Handler for drawing a tile as a solid color
- * 
- * Command arguments:
- *  - arg0 (byte): index of color in palette
- *  - arg1 (byte): horizontal tile index
- *  - arg2 (byte): vertical tile index
- **/
-void _gfx_draw_color(gfx_draw_command* command) {
-    byte color = command->arg0;
-    byte scr_tile_index_horz = command->arg1;
-    byte scr_tile_index_vert = command->arg2;
-}
-
-/**
- * Handler for performing VRAM-to-VRAM blit of a given tile
- * 
- * Command arguments:
- *  - arg0 (byte): index of tile
- *  - arg1 (byte): horizontal tile index on screen
- *  - arg2 (byte): vertical tile index on screen
- **/
-void _gfx_draw_tile(gfx_draw_command* command) {
-    byte tile_index = command->arg0;
-    byte scr_tile_index_horz = command->arg1;
-    byte scr_tile_index_vert = command->arg2;
-    
-    vga_blit_vram_to_vram(
-        (tile_index % render_tile_width) * TILE_WIDTH,
-        PAGE_HEIGHT * 2 + (tile_index / render_tile_width) * TILE_HEIGHT,
-        scr_tile_index_horz * TILE_WIDTH,
-        current_render_page_offset + scr_tile_index_vert * TILE_HEIGHT,
-        TILE_WIDTH,
-        TILE_HEIGHT
-    );
-}
-
-/**
- * Handler for performing main memory buffer-to-VRAM blit of
- * a tile (or series of tiles)
- * 
- * Can handle a maximum block copy of 16x16 tiles
- * 
- * Command arguments:
- *  - arg0 (byte): horizontal tile index in buffer
- *  - arg1 (byte): vertical tile index in buffer
- *  - arg2 (byte): dimensions (4-bit values)
- *      - high 4 bits: horizontal length (in tiles)
- *      - lower 4 bits: vertical length (in tiles)
- **/
-void _gfx_blit_tiles(gfx_draw_command* command) {
-    byte buf_tile_index_horz = command->arg0;
-    byte buf_tile_index_vert = command->arg1;
-    byte length_horz = command->arg2 & 0x0F;
-    byte length_vert = command->arg2 >> 4;
-
-    vga_blit_buffer_to_vram(
-        gfx_screen_buffer->buffer,
-        gfx_screen_buffer->width,
-        gfx_screen_buffer->height,
-        buf_tile_index_horz * TILE_WIDTH,
-        buf_tile_index_vert * TILE_HEIGHT,
-        buf_tile_index_horz * TILE_WIDTH,
-        current_render_page_offset + buf_tile_index_vert * TILE_HEIGHT,
-        TILE_WIDTH,
-        TILE_HEIGHT
-    );
-}
-
-/**
- * Handler for blitting entire main memory screen buffer into
- * the active page in VRAM
- * 
- * Command arguments:
- *  - None
- **/
-void _gfx_blit_buffer() {
-    word width = gfx_screen_buffer->width;
-    word height = gfx_screen_buffer->height;
-    byte *buffer = gfx_screen_buffer->buffer;
-    vga_blit_buffer_to_vram(buffer, width, height, 0, 0, 0, current_render_page_offset, width, height);
-}
-
-/**
- * Handler for mirroring the contents of one page to the other
- * via VRAM-to-VRAM copy
- * 
- * Command arguments:
- *  - None
- **/
-void _gfx_mirror_page() {
-    word mirror_render_page_offset = current_render_page ? PAGE_HEIGHT : 0;
-    word width = gfx_screen_buffer->width;
-    word height = gfx_screen_buffer->height;
-    byte *buffer = gfx_screen_buffer->buffer;
-    vga_blit_buffer_to_vram(buffer, width, height, 0, 0, 0, mirror_render_page_offset, width, height);
-}
-
-/**
- * Push drawing command to display list and increment count.
- **/
-void _gfx_add_command_to_display_list(int command, byte arg0, byte arg1, byte arg2) {
-    gfx_draw_command *cur_command;
-
-    /* do nothing if display list is already full */
-    if (gfx_command_count == gfx_command_count_max)
-        return;
-
-    cur_command = &gfx_display_list[gfx_command_count];
-
-    cur_command->command = (byte) command;
-    cur_command->arg0 = arg0;
-    cur_command->arg1 = arg1;
-    cur_command->arg2 = arg2;
-
-    gfx_command_count++;
-}
-
-/**
  * GRAPHICS API DEFINITIONS
  * 
  * These are the drawing routines that can be called
  * from elsewhere
  **/
 
+/**
+ * Handler for blitting entire main memory screen buffer into
+ * the active page in VRAM
+ **/
 void gfx_blit_screen_buffer() {
-    _gfx_add_command_to_display_list(GFX_BLIT_BUFFER, 0, 0 ,0);
+    vga_blit_buffer_to_vram(
+        gfx_screen_buffer->buffer,
+        PAGE_WIDTH,
+        PAGE_HEIGHT,
+        0,
+        0,
+        0,
+        current_render_page_offset,
+        PAGE_WIDTH,
+        PAGE_HEIGHT
+    );
 }
 
+/**
+ * Handler for mirroring the contents of one page to the other
+ * via VRAM-to-VRAM copy
+ **/
 void gfx_mirror_page() {
-    _gfx_add_command_to_display_list(GFX_MIRROR_PAGE, 0, 0 ,0);
+    vga_blit_vram_to_vram(
+        PAGE_WIDTH,
+        PAGE_HEIGHT,
+        0,
+        current_render_page ? PAGE_HEIGHT : 0,
+        PAGE_WIDTH,
+        PAGE_HEIGHT
+    );
 }
 
 void _gfx_draw_bitmap_to_bitmap(
@@ -303,10 +200,9 @@ void gfx_init_video() {
 
     render_tile_width = render_page_width / TILE_WIDTH;
     render_tile_height = render_page_height / TILE_HEIGHT;
+
+    // various tile buffer sizes determined by max number of tiles on-screen
     render_tile_count = (word) render_tile_width * (word) render_tile_height;
-    gfx_command_count_max = render_tile_count;
-    // display list buffer size determined by max number of tiles on-screen
-    gfx_display_list = malloc(sizeof(gfx_draw_command) * gfx_command_count_max);
     tile_index_main = calloc(render_tile_width * render_tile_height, sizeof(byte));
     tile_index_main_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
     dirty_tile_buffer = malloc(sizeof(word) * render_tile_count);
@@ -328,84 +224,6 @@ void gfx_load_tileset() {
             TILE_WIDTH,
             TILE_HEIGHT
         );
-}
-
-/**
- * Main rendering call
- **/
-void gfx_render_all() {
-    int i;
-    byte x, y, main_tile_state, main_tile;
-    gfx_draw_command *cur_command;
-
-    vga_wait_for_retrace();
-
-    /* switch to offscreen rendering page */
-    current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
-
-    for(i = 0; i < render_tile_width * render_tile_height; i++){
-        main_tile = tile_index_main[i];
-        main_tile_state = tile_index_main_states[i];
-        if(main_tile_state & (GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2)){
-            x = i % render_tile_width;
-            y = i / render_tile_width;
-
-            if(main_tile_state & GFX_TILE_STATE_SPRITE){
-                /* blit tile to VRAM if graphics have been rendered to it */
-                _gfx_add_command_to_display_list(GFX_BLIT_TILES, x, y, 0);
-
-            }
-            else if (main_tile_state & GFX_TILE_STATE_TILE){
-                /* fast blit cached tile to page */
-                _gfx_add_command_to_display_list(GFX_DRAW_TILE, main_tile, x, y);
-            }
-
-            /* decrement dirty persistent count by 1 */
-            if(current_render_page){
-                tile_index_main_states[i] = --main_tile_state;
-            }
-        }
-    }
-
-    /* Loop through and execute all commands in display list */
-    for (i = 0; i < gfx_command_count; i++) {
-        cur_command = &gfx_display_list[i];
-        switch((int) cur_command->command) {
-            case GFX_DRAW_COLOR:
-                _gfx_draw_color(cur_command);
-                break;
-            case GFX_DRAW_TILE:
-                _gfx_draw_tile(cur_command);
-                break;
-            case GFX_BLIT_TILES:
-                _gfx_blit_tiles(cur_command);
-                break;
-            case GFX_BLIT_BUFFER:
-                _gfx_blit_buffer(cur_command);
-                break;
-            case GFX_MIRROR_PAGE:
-                _gfx_mirror_page(cur_command);
-                break;
-        }
-    };
-
-    /* clear display list once all commands have finished executing */
-    gfx_command_count = 0;
-
-    /* page flip + scrolling */
-    vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
-
-    current_render_page = 1 - current_render_page;
-    frame_number++;
-
-    /* clear tiles on which sprites have been rendered to */
-    for(i = 0; i < render_tile_width * render_tile_height; i++){
-        main_tile_state = tile_index_main_states[i];
-        if(main_tile_state & (GFX_TILE_STATE_SPRITE)) {
-            _gfx_clear_tile_at_index(i);
-            tile_index_main_states[i] &= ~GFX_TILE_STATE_SPRITE;
-        }
-    }
 }
 
 void _gfx_blit_dirty_tiles() {
@@ -478,7 +296,10 @@ void _gfx_blit_dirty_tiles() {
     outpw(GC_INDEX + 1, 0x0ff);
 }
 
-void gfx_render_all_test() {
+/**
+ * Main rendering call
+ **/
+void gfx_render_all() {
     int i, j;
     word current_tile_index;
     byte current_tile_state;
