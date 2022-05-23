@@ -197,7 +197,7 @@ void gfx_set_tile(byte tile, byte x, byte y) {
     tile_index_main_states[tile_offset] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2);
     tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_TILE;
 
-    _gfx_draw_linear_bitmap_to_planar_bitmap(
+    _gfx_draw_linear_bitmap_to_linear_bitmap(
         gfx_tileset_buffer,
         gfx_screen_buffer,
         (tile % TILE_WIDTH) * TILE_WIDTH,
@@ -214,7 +214,7 @@ void _gfx_clear_tile_at_index(word tile_offset) {
     word y = tile_offset / render_tile_width;
     byte tile = tile_index_main[tile_offset];
 
-    _gfx_draw_linear_bitmap_to_planar_bitmap(
+    _gfx_draw_linear_bitmap_to_linear_bitmap(
         gfx_tileset_buffer,
         gfx_screen_buffer,
         (tile % TILE_WIDTH) * TILE_WIDTH,
@@ -235,7 +235,7 @@ void gfx_init_video() {
     vga_scroll_offset(0, 0);
     render_page_width = PAGE_WIDTH;
     render_page_height = PAGE_HEIGHT;
-    gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height, TRUE);
+    gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height, FALSE);
 
     /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
     gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE);
@@ -386,10 +386,7 @@ void gfx_render_all() {
         }
     }
 
-    // _gfx_blit_dirty_tiles();
-
-    _gfx_blit_planar_screen();
-    // gfx_blit_screen_buffer();
+    _gfx_blit_dirty_tiles();
 
     /* page flip + scrolling */
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);

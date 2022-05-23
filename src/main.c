@@ -281,7 +281,7 @@ int test_tile_routine(int testobj_max){
 
     screen_buffer = gfx_create_empty_buffer(0, 336, 256, FALSE);
     tileset_buffer = gfx_get_tileset_buffer();
-    sprite_buffer = gfx_create_empty_buffer(0, 16, 16, FALSE);
+    sprite_buffer = gfx_create_empty_buffer(0, 8, 8, FALSE);
 
     for(i=0;i<sprite_buffer->width * sprite_buffer->height;i++)
         sprite_buffer->buffer[i] = 15;
