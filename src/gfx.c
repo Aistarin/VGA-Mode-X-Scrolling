@@ -175,13 +175,9 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
     byte x, y;
     byte tile_min_x = dest_x / TILE_WIDTH;
     byte tile_min_y = dest_y / TILE_HEIGHT;
-    byte tile_max_x = MIN((dest_x + width) / TILE_WIDTH, render_tile_width);
-    byte tile_max_y = MIN((dest_y + height) / TILE_HEIGHT, render_tile_height);
+    byte tile_max_x = MIN((dest_x + width - 1) / TILE_WIDTH, render_tile_width);
+    byte tile_max_y = MIN((dest_y + height - 1) / TILE_HEIGHT, render_tile_height);
     int tile_offset;
-    /* TODO: refactor to ensure that tile-aligned bitmaps only mark
-     * the exact tiles that are underneath them and not the tiles
-     * at the bottom left edges!
-     **/
     for(y = tile_min_y; y <= tile_max_y; y++)
         for(x = tile_min_x; x <= tile_max_x; x++){
             tile_offset = ((int) y * (int) render_tile_width) + (int) x;
