@@ -284,17 +284,12 @@ void _gfx_blit_planar_screen() {
     }
 }
 
-void _gfx_blit_dirty_tiles() {
-    byte plane, tile_index;
+void _gfx_blit_dirty_sprite_tiles_linear() {
+    byte plane;
     word current_tile;
-    dword x, y, i, vga_offset, tile_offset, dest_x, dest_y, source_x, source_y;
+    dword x, y, i, vga_offset, dest_x, dest_y, source_x, source_y;
     byte *screen_buffer = gfx_screen_buffer->buffer;
     byte *VGA = (byte *) 0xA0000;
-    int line;
-
-    // pixel variable made volatile to prevent the compiler from
-    // optimizing it out, since value is actually not used
-    volatile byte pixel;
 
     for(plane = 0; plane < 4; plane++) {
         // select one plane at a time
@@ -303,17 +298,6 @@ void _gfx_blit_dirty_tiles() {
 
         for(i = 0; i < dirty_sprite_tile_count; i++) {
             current_tile = dirty_sprite_tile_buffer[i];
-            // x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
-            // y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
-            // vga_offset = ((dword) (current_render_page_offset + y) * PAGE_WIDTH + x) >> 2;
-            // tile_offset = PAGE_WIDTH * y + x;
-            // for(y = 0; y < TILE_HEIGHT; y++) {
-            //     for(x = plane; x < TILE_WIDTH; x += 4) {
-            //         VGA[vga_offset] = screen_buffer[tile_offset + x];
-            //     }
-            //     tile_offset += PAGE_WIDTH;
-            //     vga_offset += PAGE_WIDTH >> 2;
-            // }
             /* TODO: this could be optimized better to use less variables */
             source_x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
             source_y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
@@ -322,11 +306,52 @@ void _gfx_blit_dirty_tiles() {
             for(y = 0; y < TILE_HEIGHT; y++) {
                 for(x = plane; x < TILE_WIDTH; x += 4) {
                     vga_offset = ((dword) (dest_y + y) * PAGE_WIDTH + (dest_x + x)) >> 2;
-                    VGA[(word)vga_offset]=screen_buffer[PAGE_WIDTH * (source_y + y) + (source_x + x)];
+                    VGA[(word)vga_offset] = screen_buffer[PAGE_WIDTH * (source_y + y) + (source_x + x)];
                 }
             }
         }
     }
+}
+
+void _gfx_blit_dirty_sprite_tiles_planar() {
+    byte plane;
+    word current_tile;
+    dword x, y, i, offset, plane_offset, source_x, source_y;
+    dword initial_offset = (current_render_page_offset * PAGE_WIDTH) >> 2;
+    byte *screen_buffer = gfx_screen_buffer->buffer;
+    byte *VGA = (byte *) 0xA0000;
+
+    for(plane = 0; plane < 4; plane++) {
+        // select one plane at a time
+        outp(SC_INDEX, MAP_MASK);
+        outp(SC_DATA, 1 << plane);
+
+        plane_offset = (gfx_screen_buffer->buffer_size >> 2) * plane;
+
+        for(i = 0; i < dirty_sprite_tile_count; i++) {
+            current_tile = dirty_sprite_tile_buffer[i];
+            /* TODO: this could be optimized better to use less variables */
+            source_x = ((word) (current_tile % render_tile_width) * TILE_WIDTH) >> 2;
+            source_y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
+            for(y = 0; y < TILE_HEIGHT; y++) {
+                for(x = 0; x < TILE_WIDTH >> 2; x++) {
+                    offset = ((dword) (source_y + y) * (PAGE_WIDTH >> 2) + (source_x + x));
+                    VGA[(word) offset + initial_offset] = screen_buffer[plane_offset + offset];
+                }
+            }
+        }
+    }
+}
+
+void _gfx_blit_dirty_tiles() {
+    byte tile_index;
+    word current_tile;
+    dword x, y, i, vga_offset, tile_offset;
+    byte *VGA = (byte *) 0xA0000;
+
+    // pixel variable made volatile to prevent the compiler from
+    // optimizing it out, since value is actually not used
+    volatile byte pixel;
 
     outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK);      //select all planes
     outpw(GC_INDEX, 0x08);                              //set to or mode
@@ -386,7 +411,9 @@ void gfx_render_all() {
         }
     }
 
-    _gfx_blit_planar_screen();
+    // _gfx_blit_planar_screen();
+    _gfx_blit_dirty_sprite_tiles_planar();
+    _gfx_blit_dirty_tiles();
 
     /* page flip + scrolling */
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
