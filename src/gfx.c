@@ -477,7 +477,7 @@ void gfx_render_all() {
     }
 
     // _gfx_blit_planar_screen();
-    _gfx_blit_dirty_sprite_tiles_planar();
+    _gfx_blit_dirty_sprite_tiles_planar_2();
     _gfx_blit_dirty_tiles();
 
     /* page flip + scrolling */
