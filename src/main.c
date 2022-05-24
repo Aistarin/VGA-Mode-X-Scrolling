@@ -271,6 +271,8 @@ int test_tile_routine(int testobj_max){
     gfx_buffer *screen_buffer;
     gfx_buffer *tileset_buffer;
     gfx_buffer *sprite_buffer;
+    gfx_buffer *test_buffer;
+    byte palette[256*3];
 
     int testobj_count = 0;
 
@@ -279,14 +281,20 @@ int test_tile_routine(int testobj_max){
 
     gfx_init_video();
 
-    screen_buffer = gfx_create_empty_buffer(0, 336, 256, FALSE);
+    screen_buffer = gfx_get_screen_buffer();
     tileset_buffer = gfx_get_tileset_buffer();
-    sprite_buffer = gfx_create_empty_buffer(0, 8, 8, FALSE);
+    test_buffer = gfx_create_empty_buffer(0, 320, 240, FALSE);
+    sprite_buffer = gfx_create_empty_buffer(0, TILE_WIDTH, TILE_HEIGHT, FALSE);
 
-    for(i=0;i<sprite_buffer->width * sprite_buffer->height;i++)
-        sprite_buffer->buffer[i] = 15;
+    render_pattern_to_buffer_2(sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
-    render_pattern_to_buffer_1(screen_buffer->buffer, screen_buffer->width, screen_buffer->height);
+    // for(i=0;i<sprite_buffer->width * sprite_buffer->height;i++)
+    //     sprite_buffer->buffer[i] = 15;
+
+    // load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, 256, 256, palette);
+    // vga_set_palette(palette, 0, 255);
+
+    render_pattern_to_buffer_2(test_buffer->buffer, test_buffer->width, test_buffer->height);
     render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
 
     gfx_load_tileset();
@@ -309,7 +317,7 @@ int test_tile_routine(int testobj_max){
         else {
             for(j = 0; j < testobj_count; j++) {
                 cur_testobj = &testobj_list[j];
-                gfx_draw_bitmap_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos, (word) cur_testobj->ypos, 8, 8);
+                gfx_draw_bitmap_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos, (word) cur_testobj->ypos, sprite_buffer->width, sprite_buffer->height);
 
                 cur_testobj->xpos += cur_testobj->hspeed;
                 cur_testobj->ypos += cur_testobj->vspeed;
