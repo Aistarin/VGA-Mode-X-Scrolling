@@ -32,6 +32,12 @@ typedef struct gfx_buffer {
     byte *buffer;                           // array of bytes that holds raw bitmap data
 } gfx_buffer;
 
+typedef struct gfx_dirty_tile_offset {
+    word tile_index;                        // index of screen tile
+    dword offset;                           // planar memory offset
+    word length;                            // length of pixels to copy
+} gfx_dirty_tile_offset;
+
 void gfx_init_video();
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar);
 void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
@@ -43,5 +49,6 @@ void gfx_mirror_page();
 void gfx_render_all();
 void gfx_load_tileset();
 void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
+void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 
 #endif

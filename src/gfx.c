@@ -26,8 +26,9 @@ word dirty_tile_count = 0;              // number of dirty tiles to be vram-to-v
 word *dirty_sprite_tile_buffer;         // buffer of all dirty tiles to be main memory-to-vram blitted
 word dirty_sprite_tile_count = 0;       // number of dirty tiles to be main memory-to-vram blitted
 
-dword *dirty_sprite_tile_offsets;       // buffer of dirty tile offset tuples ((dword) offset, (dword) length)
-word dirty_sprite_tile_offset_count = 0;// number of dirty tile offset tuples
+gfx_dirty_tile_offset *dirty_sprite_tile_offsets;       // buffer of dirty tile offsets
+word dirty_sprite_tile_offset_count;                    // number of dirty tile offsets
+byte *dirty_sprite_offset_counts;                       // number of dirty tile offsets per row
 
 int frame_number = 0;
 
@@ -151,6 +152,7 @@ void _gfx_draw_linear_bitmap_to_planar_bitmap(
     byte *dest_buffer = dest_bitmap->buffer;
     word dest_buffer_width = dest_bitmap->width;
     word dest_buffer_height = dest_bitmap->height;
+    int dest_buffer_size = gfx_screen_buffer->buffer_size >> 2;
     byte *source_buffer = source_bitmap->buffer;
     word source_buffer_width = source_bitmap->width;
     word source_buffer_height = source_bitmap->height;
@@ -163,9 +165,9 @@ void _gfx_draw_linear_bitmap_to_planar_bitmap(
 
     for(i = 0; i < 4; i++) {
         plane = (initial_plane + i) % 4;
-        plane_offset = (dest_bitmap->buffer_size >> 2) * plane;
-        for(y = 0; y < height; y++) {
-            for(x = i; x < width; x += 4) {
+        plane_offset = dest_buffer_size * plane;
+        for(y = 0; y < max_height; y++) {
+            for(x = i; x < max_width; x += 4) {
                 offset = ((dword) (dest_y + y) * PAGE_WIDTH + (dest_x + x)) >> 2;
                 source_offset = source_buffer_width * (source_y + y) + (source_x + x);
                 dest_buffer[plane_offset + offset] = source_buffer[source_offset];
@@ -187,7 +189,7 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
             tile_index_main_states[tile_offset] &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2);
             tile_index_main_states[tile_offset] |= GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE;
         };
-
+    // gfx_draw_planar_sprite_to_planar_screen(bitmap, dest_x, (word) dest_y);
     _gfx_draw_linear_bitmap_to_planar_bitmap(bitmap, gfx_screen_buffer, source_x, source_y, dest_x, dest_y, width, height);
 }
 
@@ -211,6 +213,67 @@ void gfx_set_tile(byte tile, byte x, byte y) {
     );
 }
 
+void _gfx_draw_tile_to_planar_screen(byte tile, word tile_x, word tile_y) {
+    byte *dest_buffer = gfx_screen_buffer->buffer;
+    word dest_buffer_width = gfx_screen_buffer->width;
+    word dest_buffer_height = gfx_screen_buffer->height;
+    int dest_buffer_size = gfx_screen_buffer->buffer_size >> 2;
+    byte *tile_buffer = &gfx_tileset_buffer->buffer[tile * TILE_WIDTH * TILE_HEIGHT];
+    int dest_x = tile_x * TILE_WIDTH, dest_y = tile_y * TILE_HEIGHT;
+
+    int x, y, i, plane, offset, source_offset, plane_offset, plane_x_offset;
+    int initial_plane = (dest_x % 4);
+    int max_x = MIN(dest_buffer_width, dest_x + TILE_WIDTH);
+    int max_y = MIN(dest_buffer_height, dest_y + TILE_HEIGHT);
+    int max_width = max_x - dest_x;
+    int max_height = max_y - dest_y;
+
+    for(i = 0; i < 4; i++) {
+        plane = (initial_plane + i) % 4;
+        plane_offset = dest_buffer_size * plane;
+        for(y = 0; y < TILE_HEIGHT; y++) {
+            /* TODO: for now we are pretending tile is already in planar format so we can
+               perform entire width copy with a single memcpy to make more cache-friendly */
+            for(x = i; x < TILE_WIDTH; x += 4) {
+                offset = ((dword) (dest_y + y) * PAGE_WIDTH + (dest_x + x)) >> 2;
+                source_offset = TILE_WIDTH * (dest_y + y) + (dest_x + x);
+                dest_buffer[plane_offset + offset] = tile_buffer[source_offset];
+            }
+        }
+    }
+}
+
+void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word dest_x, word dest_y) {
+    byte *dest_buffer = gfx_screen_buffer->buffer;
+    word dest_buffer_width = gfx_screen_buffer->width;
+    word dest_buffer_height = gfx_screen_buffer->height;
+    byte *sprite_buffer = sprite_bitmap->buffer;
+    word sprite_buffer_width = sprite_bitmap->width;
+    word sprite_buffer_height = sprite_bitmap->height;
+    int dest_buffer_size = gfx_screen_buffer->buffer_size >> 2;
+
+    int x, y, i, plane, offset, source_offset, plane_offset, plane_x_offset;
+    int initial_plane = (dest_x % 4);
+    int max_x = MIN(dest_buffer_width, dest_x + sprite_buffer_width);
+    int max_y = MIN(dest_buffer_height, dest_y + sprite_buffer_height);
+    int max_width = max_x - dest_x;
+    int max_height = max_y - dest_y;
+
+    for(i = 0; i < 4; i++) {
+        plane = (initial_plane + i) % 4;
+        plane_offset = dest_buffer_size * plane;
+        for(y = 0; y < max_height; y++) {
+            /* TODO: pretend sprite is already in planar format and perform
+               entire width (planar_ copy with a single memcpy to make more cache-friendly */
+            for(x = i; x < max_width; x += 4) {
+                offset = ((dword) (dest_y + y) * PAGE_WIDTH + (dest_x + x)) >> 2;
+                source_offset = sprite_buffer_width * y + x;
+                dest_buffer[plane_offset + offset] = sprite_buffer[source_offset];
+            }
+        }
+    }
+}
+
 void _gfx_clear_tile_at_index(word tile_offset) {
     word x = tile_offset % render_tile_width;
     word y = tile_offset / render_tile_width;
@@ -226,6 +289,7 @@ void _gfx_clear_tile_at_index(word tile_offset) {
         TILE_WIDTH,
         TILE_HEIGHT
     );
+    // _gfx_draw_tile_to_planar_screen(tile, x, y);
 }
 
 /**
@@ -251,7 +315,9 @@ void gfx_init_video() {
     tile_index_main_states = calloc(render_tile_width * render_tile_height, sizeof(byte));
     dirty_tile_buffer = malloc(sizeof(word) * render_tile_count);
     dirty_sprite_tile_buffer = malloc(sizeof(word) * render_tile_count);
-    dirty_sprite_tile_offsets = malloc(sizeof(dword) * render_tile_count * 2);
+    dirty_sprite_tile_offsets = malloc(sizeof(gfx_dirty_tile_offset) * render_tile_count);
+    dirty_sprite_offset_counts = malloc(render_tile_height);
+    memset(dirty_sprite_offset_counts, 0, render_tile_height);
 }
 
 /* this loads the tileset into the VRAM after the two pages */
@@ -320,10 +386,12 @@ void _gfx_blit_dirty_sprite_tiles_linear() {
 void _gfx_blit_dirty_sprite_tiles_planar() {
     byte plane;
     word current_tile;
-    dword x, y, i, offset, plane_offset, source_x, source_y;
+    dword x, y, i, plane_offset, current_row, row_count;
     dword initial_offset = (current_render_page_offset * PAGE_WIDTH) >> 2;
     byte *screen_buffer = gfx_screen_buffer->buffer;
     byte *VGA = (byte *) 0xA0000;
+    gfx_dirty_tile_offset current_offset;
+    dword row_offset;
 
     for(plane = 0; plane < 4; plane++) {
         // select one plane at a time
@@ -332,42 +400,20 @@ void _gfx_blit_dirty_sprite_tiles_planar() {
 
         plane_offset = (gfx_screen_buffer->buffer_size >> 2) * plane;
 
-        for(i = 0; i < dirty_sprite_tile_count; i++) {
-            current_tile = dirty_sprite_tile_buffer[i];
-            source_x = ((word) (current_tile % render_tile_width) * TILE_WIDTH) >> 2;
-            source_y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
+        i = 0;
+        current_row = 0;
+        while(i < dirty_sprite_tile_offset_count) {
+            row_count = dirty_sprite_offset_counts[current_row];
+            row_offset = 0;
             for(y = 0; y < TILE_HEIGHT; y++) {
-                offset = ((dword) (source_y + y) * (PAGE_WIDTH >> 2) + (source_x));
-                memcpy(&VGA[(word) offset + initial_offset], &screen_buffer[plane_offset + offset], TILE_WIDTH >> 2);
+                for(x = i; x < i + row_count; x++) {
+                    current_offset = dirty_sprite_tile_offsets[x];
+                    memcpy(&VGA[initial_offset + current_offset.offset + row_offset], &screen_buffer[plane_offset + current_offset.offset + row_offset], current_offset.length);
+                }
+                row_offset += PAGE_WIDTH >> 2;
             }
-        }
-    }
-}
-
-void _gfx_blit_dirty_sprite_tiles_planar_2() {
-    byte plane;
-    word current_tile;
-    dword x, y, i, plane_offset;
-    dword initial_offset = (current_render_page_offset * PAGE_WIDTH) >> 2;
-    byte *screen_buffer = gfx_screen_buffer->buffer;
-    byte *VGA = (byte *) 0xA0000;
-    dword current_dirty_offset;
-    dword current_dirty_length;
-
-    for(plane = 0; plane < 4; plane++) {
-        // select one plane at a time
-        outp(SC_INDEX, MAP_MASK);
-        outp(SC_DATA, 1 << plane);
-
-        plane_offset = (gfx_screen_buffer->buffer_size >> 2) * plane;
-
-        for(i = 0; i < dirty_sprite_tile_offset_count; i+=2) {
-            current_dirty_offset = dirty_sprite_tile_offsets[i];
-            current_dirty_length = dirty_sprite_tile_offsets[i + 1];
-            for(y = 0; y < TILE_HEIGHT; y++) {
-                memcpy(&VGA[initial_offset + current_dirty_offset], &screen_buffer[plane_offset + current_dirty_offset], current_dirty_length);
-                current_dirty_offset += PAGE_WIDTH >> 2;
-            }
+            current_row++;
+            i += row_count;
         }
     }
 }
@@ -408,6 +454,17 @@ void _gfx_blit_dirty_tiles() {
     outpw(GC_INDEX + 1, 0x0ff);
 }
 
+void _gfx_add_dirty_tile_offset(word tile_index, word tile_length) {
+    gfx_dirty_tile_offset *cur_offset = &dirty_sprite_tile_offsets[dirty_sprite_tile_offset_count++];
+
+    dirty_sprite_offset_counts[tile_index / render_tile_width]++;
+
+    cur_offset->tile_index = tile_index;
+    cur_offset->offset = ((((tile_index / render_tile_width) * PAGE_WIDTH * TILE_HEIGHT))
+        + ((tile_index % render_tile_width) * TILE_WIDTH)) >> 2;
+    cur_offset->length = (tile_length * TILE_WIDTH) >> 2;
+}
+
 /**
  * Main rendering call
  **/
@@ -425,6 +482,9 @@ void gfx_render_all() {
     /* switch to offscreen rendering page */
     current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
 
+    /* clear dirty sprite offset counts per row */
+    memset(dirty_sprite_offset_counts, 0, render_tile_height);
+
     /* queue all of the dirty tiles in the main memory buffer */
     for(i = 0; i < render_tile_count; i++) {
         current_tile_state = tile_index_main_states[i];
@@ -440,17 +500,13 @@ void gfx_render_all() {
 
                 if((i + 1) % render_tile_width == 0) {
                     consecutive_dirty_sprite_tile = FALSE;
-                    dirty_sprite_tile_offsets[dirty_sprite_tile_offset_count] = initial_dirty_sprite_tile_index;
-                    dirty_sprite_tile_offsets[dirty_sprite_tile_offset_count + 1] = i - initial_dirty_sprite_tile_index + 1;
-                    dirty_sprite_tile_offset_count += 2;
+                    _gfx_add_dirty_tile_offset(initial_dirty_sprite_tile_index, i - initial_dirty_sprite_tile_index + 1);
                 }
             }
             else {
                 if(consecutive_dirty_sprite_tile) {
                     consecutive_dirty_sprite_tile = FALSE;
-                    dirty_sprite_tile_offsets[dirty_sprite_tile_offset_count] = initial_dirty_sprite_tile_index;
-                    dirty_sprite_tile_offsets[dirty_sprite_tile_offset_count + 1] = i - initial_dirty_sprite_tile_index;
-                    dirty_sprite_tile_offset_count += 2;
+                    _gfx_add_dirty_tile_offset(initial_dirty_sprite_tile_index, i - initial_dirty_sprite_tile_index);
                 }
 
                 if (current_tile_state & GFX_TILE_STATE_TILE) {
@@ -463,27 +519,23 @@ void gfx_render_all() {
             tile_index_main_states[i] = --current_tile_state;
         } else if(consecutive_dirty_sprite_tile) {
             consecutive_dirty_sprite_tile = FALSE;
-            dirty_sprite_tile_offsets[dirty_sprite_tile_offset_count] = initial_dirty_sprite_tile_index;
-            dirty_sprite_tile_offsets[dirty_sprite_tile_offset_count + 1] = i - initial_dirty_sprite_tile_index;
-            dirty_sprite_tile_offset_count += 2;
+            _gfx_add_dirty_tile_offset(initial_dirty_sprite_tile_index, i - initial_dirty_sprite_tile_index);
         }
     }
 
-    for(i = 0; i < dirty_sprite_tile_offset_count; i+=2) {
-        dirty_sprite_tile_offsets[i] = ((((dirty_sprite_tile_offsets[i] / render_tile_width) * PAGE_WIDTH * TILE_HEIGHT))
-            + ((dirty_sprite_tile_offsets[i] % render_tile_width) * TILE_WIDTH)) >> 2;
-        dirty_sprite_tile_offsets[i + 1] = (dirty_sprite_tile_offsets[i + 1] * TILE_WIDTH) >> 2;
-        // printf("offset: %d, length: %d, frame: %d\n", dirty_sprite_tile_offsets[i], dirty_sprite_tile_offsets[i + 1], frame_number);
-    }
-
     // _gfx_blit_planar_screen();
-    _gfx_blit_dirty_sprite_tiles_planar_2();
-    _gfx_blit_dirty_tiles();
+    if (dirty_sprite_tile_offset_count > 0)
+        _gfx_blit_dirty_sprite_tiles_planar();
+
+    if (dirty_tile_count > 0)
+        _gfx_blit_dirty_tiles();
 
     /* page flip + scrolling */
     vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
 
     /* clear tiles on which sprites have been rendered to */
+    /* TODO: looks like there is a bottleneck here! Perhaps it's also time to
+       start storing + rendering sprites + tiles in planar format */
     for(i = 0; i < dirty_sprite_tile_count; i++) {
         current_tile_index = dirty_sprite_tile_buffer[i];
         _gfx_clear_tile_at_index(current_tile_index);
