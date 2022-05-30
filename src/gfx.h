@@ -32,12 +32,6 @@ typedef struct gfx_buffer {
     byte *buffer;                           // array of bytes that holds raw bitmap data
 } gfx_buffer;
 
-typedef struct gfx_dirty_tile_offset {
-    word tile_index;                        // index of screen tile
-    dword offset;                           // planar memory offset
-    word length;                            // length of pixels to copy
-} gfx_dirty_tile_offset;
-
 typedef struct gfx_sprite_to_draw {
     gfx_buffer *sprite_buffer;              // pointer to planar sprite bitmap data
     word dest_x;                            // x destination coords of sprite
