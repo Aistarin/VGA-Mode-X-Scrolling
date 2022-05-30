@@ -55,9 +55,9 @@ typedef struct gfx_screen_state {
     word tiles_to_update_count;             // number of tiles to update
     word sprites_to_draw_count;             // number of sprites to draw
     gfx_tile_state *tile_index;             // main tile index
+    gfx_sprite_to_draw *sprites_to_draw;    // buffer of sprites to draw on screen
     word *tiles_to_clear;                   // list of tiles to clear
     word *tiles_to_update;                  // list of tiles to update
-    gfx_sprite_to_draw *sprites_to_draw;    // buffer of sprites to draw on screen
 } gfx_screen_state;
 
 void gfx_init_video();

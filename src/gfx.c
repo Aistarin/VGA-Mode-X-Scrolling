@@ -49,14 +49,13 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
 struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_tiles) {
     struct gfx_screen_state* screen_state;
     word tile_count = (word) horz_tiles * (word) vert_tiles;
-
-    screen_state = malloc(
-        sizeof(gfx_screen_state)
+    dword bytes_to_allocate = sizeof(gfx_screen_state)
         + sizeof(gfx_tile_state) * tile_count               // memory for tile index
         + sizeof(word) * tile_count                         // memory for tile to clear
         + sizeof(word) * tile_count                         // memory for tiles to update
-        + sizeof(gfx_sprite_to_draw) * 256                  // memory for sprites to draw
-    );
+        + sizeof(gfx_sprite_to_draw) * 256;                 // memory for sprites to draw
+
+    screen_state = malloc(bytes_to_allocate);
 
     screen_state->tile_count = tile_count;
     screen_state->horz_tiles = horz_tiles;
@@ -66,23 +65,22 @@ struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_til
     screen_state->sprites_to_draw_count = 0;
 
     /* set pointers to contiguous memory locations */
+    /* TODO: ensure this way of allocating struct arrays is correct, currently
+       causing memory writing issues with 13 or more sprites on screen! */
     screen_state->tile_index = (gfx_tile_state *) screen_state + sizeof(struct gfx_screen_state);
-    memset(screen_state->tile_index, 0, sizeof(gfx_tile_state) * tile_count);
-    screen_state->tiles_to_clear = (word *) screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count;
-    // memset(screen_state->tiles_to_clear, 0, sizeof(word) * tile_count);
+    memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
+    screen_state->sprites_to_draw = (gfx_sprite_to_draw *) screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count;
+    screen_state->tiles_to_clear = (word *) screen_state->sprites_to_draw + sizeof(struct gfx_sprite_to_draw) * 256;
     screen_state->tiles_to_update = (word *) screen_state->tiles_to_clear + sizeof(word) * tile_count;
-    // memset(screen_state->tiles_to_update, 0, sizeof(word) * tile_count);
-    screen_state->sprites_to_draw = (gfx_sprite_to_draw *) screen_state->tiles_to_clear + sizeof(word) * tile_count;
-    // memset(screen_state->sprites_to_draw, 0, sizeof(gfx_sprite_to_draw) * 256);
 
     return screen_state;
 }
 
-void _set_tile_states(gfx_screen_state *screen_state, byte tile_state, bool clear, byte x, byte y, byte width, byte height) {
+void _set_tile_states(gfx_screen_state *screen_state, byte tile_state, bool clear, byte x, byte y, byte max_x, byte max_y) {
     byte i, j;
     word tile_offset;
-    for(j = y; j < y + height; j++)
-        for(i = x; i < x + width; i++){
+    for(j = y; j <= max_y; j++)
+        for(i = x; i <= max_x; i++){
             tile_offset = ((word) j * (word) screen_state->horz_tiles) + (word) i;
             if(clear) 
                 screen_state->tile_index[tile_offset].state &= ~(tile_state);
@@ -226,17 +224,16 @@ void _gfx_draw_linear_bitmap_to_planar_bitmap(
 void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
     word tile_x = dest_x / TILE_WIDTH;
     word tile_y = dest_y / TILE_HEIGHT;
-    word max_tile_x = ((dest_x + width) / TILE_WIDTH) - tile_x + 1;
-    word max_tile_y = ((dest_y + height) / TILE_HEIGHT) - tile_y + 1;
-    // printf("sprite tile x: %d, y: %d, max_tile_x: %d, max_tile_y: %d\n", tile_x, tile_y, max_tile_x, max_tile_y);
+    word tile_max_x = ((dest_x + width - 1) / TILE_WIDTH);
+    word tile_max_y = ((dest_y + height - 1) / TILE_HEIGHT);
     _set_tile_states(
         screen_state_current,
         GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE,
         FALSE,
         tile_x,
         tile_y,
-        max_tile_x,
-        max_tile_y
+        tile_max_x,
+        tile_max_y
     );
     _gfx_add_sprite_to_draw(screen_state_current, bitmap, dest_x, dest_y, width, height);
 }
@@ -246,8 +243,8 @@ void gfx_set_tile(byte tile, byte x, byte y) {
     /* update states for both pages so that states are immediately available for next page flip */
     screen_state_page_0->tile_index[tile_offset].tile = tile;
     screen_state_page_1->tile_index[tile_offset].tile = tile;
-    _set_tile_states(screen_state_page_0, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, 1, 1);
-    _set_tile_states(screen_state_page_1, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, 1, 1);
+    _set_tile_states(screen_state_page_0, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, x, y);
+    _set_tile_states(screen_state_page_1, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, x, y);
 }
 
 void _gfx_draw_tile_to_planar_screen(byte tile, word tile_x, word tile_y) {
