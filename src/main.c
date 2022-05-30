@@ -305,6 +305,9 @@ int test_tile_routine(int testobj_max){
     for(i = 0; i < 48; i++)
         gfx_set_tile(0, i % 3 + 18, i / 3);
 
+    // for(i = 0; i < 256; i++)
+    //     gfx_set_tile(i, i % 16 + 2, i / 16);
+
     // main program loop
     i = 0;
     j = 0;
@@ -317,7 +320,7 @@ int test_tile_routine(int testobj_max){
         else {
             for(j = 0; j < testobj_count; j++) {
                 cur_testobj = &testobj_list[j];
-                gfx_draw_bitmap_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos, (word) cur_testobj->ypos, sprite_buffer->width, sprite_buffer->height);
+                gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos, (word) cur_testobj->ypos, sprite_buffer->width, sprite_buffer->height);
 
                 cur_testobj->xpos += cur_testobj->hspeed;
                 cur_testobj->ypos += cur_testobj->vspeed;

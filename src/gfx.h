@@ -15,10 +15,10 @@ enum gfx_color_depths {
 };
 
 enum gfx_tile_states {
-    GFX_TILE_STATE_DIRTY_1  = 0x01,         // screen tile has been modified
-    GFX_TILE_STATE_DIRTY_2  = 0x02,         // screen tile has been modified
-    GFX_TILE_STATE_TILE     = 0x04,         // screen tile has a tile assigned to it
-    GFX_TILE_STATE_SPRITE   = 0x08          // screen tile has had a sprite drawn to it
+    GFX_TILE_STATE_TILE     = 0x01,         // screen tile has a tile assigned to it
+    GFX_TILE_STATE_SPRITE   = 0x02,         // screen tile has a sprite or bitmap drawn to it
+    GFX_TILE_STATE_DIRTY_1  = 0x04,         // screen tile has been modified with a tile
+    GFX_TILE_STATE_DIRTY_2  = 0x08          // screen tile has been modified with a sprite or bitmap
 };
 
 int gfx_color_depth_sizes[] = {1, 2, 2, 3, 4};
@@ -46,6 +46,26 @@ typedef struct gfx_sprite_to_draw {
     word height;
 } gfx_sprite_to_draw;
 
+typedef struct gfx_tile_state {
+    word tile;                              // tileset index
+    byte color;                             // default color
+    byte state;                             // state of tile
+} gfx_tile_state;
+
+typedef struct gfx_screen_state {
+    dword render_page_offset;               // current VRAM offset
+    word tile_count;                        // number of tiles total
+    byte horz_tiles;                        // number of horizontal tiles
+    byte vert_tiles;                        // number of vertical tiles
+    word tiles_to_clear_count;              // number of tiles to clear before drawing sprites
+    word tiles_to_update_count;             // number of tiles to update
+    word sprites_to_draw_count;             // number of sprites to draw
+    gfx_tile_state *tile_index;             // main tile index
+    word *tiles_to_clear;                   // list of tiles to clear
+    word *tiles_to_update;                  // list of tiles to update
+    gfx_sprite_to_draw *sprites_to_draw;    // buffer of sprites to draw on screen
+} gfx_screen_state;
+
 void gfx_init_video();
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar);
 void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
@@ -56,7 +76,7 @@ void gfx_blit_screen_buffer();
 void gfx_mirror_page();
 void gfx_render_all();
 void gfx_load_tileset();
-void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
+void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 
 #endif
