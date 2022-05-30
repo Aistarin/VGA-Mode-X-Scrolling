@@ -38,6 +38,14 @@ typedef struct gfx_dirty_tile_offset {
     word length;                            // length of pixels to copy
 } gfx_dirty_tile_offset;
 
+typedef struct gfx_sprite_to_draw {
+    gfx_buffer *sprite_buffer;              // pointer to planar sprite bitmap data
+    word dest_x;                            // x destination coords of sprite
+    word dest_y;                            // y destination coords of sprite
+    word width;
+    word height;
+} gfx_sprite_to_draw;
+
 void gfx_init_video();
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar);
 void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
