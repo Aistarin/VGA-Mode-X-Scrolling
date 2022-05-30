@@ -28,9 +28,6 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
     struct gfx_buffer* empty_buffer;
     int buffer_size = (int) width * (int) height;
 
-    /* align buffer size to multiple of int size */
-    buffer_size = buffer_size + ((sizeof(unsigned int)) - buffer_size % sizeof(unsigned int));
-
     empty_buffer = malloc(sizeof(struct gfx_buffer) + (sizeof(byte) * buffer_size));
 
     empty_buffer->buffer_size = buffer_size;
@@ -155,6 +152,21 @@ void gfx_mirror_page() {
         PAGE_WIDTH,
         PAGE_HEIGHT
     );
+}
+
+void gfx_load_linear_bitmap_to_planar_bitmap(byte *source_bitmap, byte *dest_bitmap, word width, word height) {
+    byte plane;
+    word x, y;
+    dword offset;
+
+    for(plane = 0; plane < 4; plane++){
+        offset = ((width * height) >> 2) * plane;
+        for(x = plane; x < width; x += 4) {
+            for(y = 0; y < height; y++) {
+                dest_bitmap[offset++] = source_bitmap[y * width + x];
+            }
+        }
+    }
 }
 
 void _gfx_draw_linear_bitmap_to_linear_bitmap(
@@ -440,7 +452,6 @@ void gfx_blit_sprites() {
             for(x = 0; x < sprite_width; x++) {
                 vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + x;
                 for(y = 0; y < sprite_height; y++) {
-                    // VGA[vga_offset] = screen_buffer[sprite_offset + sprite_height * x + y];
                     VGA[vga_offset] = sprite_buffer[sprite_offset++];
                     vga_offset += PAGE_WIDTH >> 2;
                 }

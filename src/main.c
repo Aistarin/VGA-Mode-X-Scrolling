@@ -283,19 +283,18 @@ int test_tile_routine(int testobj_max){
 
     screen_buffer = gfx_get_screen_buffer();
     tileset_buffer = gfx_get_tileset_buffer();
-    test_buffer = gfx_create_empty_buffer(0, 320, 240, FALSE);
-    sprite_buffer = gfx_create_empty_buffer(0, TILE_WIDTH, TILE_HEIGHT, FALSE);
-
-    render_pattern_to_buffer_2(sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
+    test_buffer = gfx_create_empty_buffer(0, TILE_WIDTH, TILE_HEIGHT, FALSE);
+    sprite_buffer = gfx_create_empty_buffer(0, TILE_WIDTH, TILE_HEIGHT, TRUE);
 
     // for(i=0;i<sprite_buffer->width * sprite_buffer->height;i++)
     //     sprite_buffer->buffer[i] = 15;
 
-    // load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, 256, 256, palette);
+    // load_bmp_to_buffer("dvd-logo.bmp", test_buffer->buffer, 64, 32, palette);
     // vga_set_palette(palette, 0, 255);
 
     render_pattern_to_buffer_2(test_buffer->buffer, test_buffer->width, test_buffer->height);
     render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+    gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, TILE_WIDTH, TILE_HEIGHT);
 
     gfx_load_tileset();
 
@@ -344,6 +343,7 @@ int test_tile_routine(int testobj_max){
                 cur_testobj->vspeed = 1 + rand() % 5;
             }
         }
+        // gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, 0, 0, sprite_buffer->width, sprite_buffer->height);
         gfx_render_all();
     }
 
