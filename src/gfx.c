@@ -52,7 +52,7 @@ struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_til
         + sizeof(word) * tile_count                         // memory for tiles to update
         + sizeof(gfx_sprite_to_draw) * 256;                 // memory for sprites to draw
 
-    screen_state = malloc(bytes_to_allocate);
+    screen_state = (gfx_screen_state *) malloc(bytes_to_allocate);
 
     screen_state->tile_count = tile_count;
     screen_state->horz_tiles = horz_tiles;
@@ -66,9 +66,9 @@ struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_til
        causing memory writing issues with 13 or more sprites on screen! */
     screen_state->tile_index = (gfx_tile_state *) screen_state + sizeof(struct gfx_screen_state);
     memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
-    screen_state->sprites_to_draw = (gfx_sprite_to_draw *) screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count;
-    screen_state->tiles_to_clear = (word *) screen_state->sprites_to_draw + sizeof(struct gfx_sprite_to_draw) * 256;
-    screen_state->tiles_to_update = (word *) screen_state->tiles_to_clear + sizeof(word) * tile_count;
+    screen_state->sprites_to_draw = (gfx_sprite_to_draw *) (screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count);
+    screen_state->tiles_to_clear = (word *) (screen_state->sprites_to_draw + sizeof(struct gfx_sprite_to_draw) * 256);
+    screen_state->tiles_to_update = (word *) (screen_state->tiles_to_clear + sizeof(word) * tile_count);
 
     return screen_state;
 }
