@@ -22,6 +22,9 @@ gfx_screen_state *screen_state_current; // pointer to current screen state
 gfx_screen_state *screen_state_page_0;  // screen state for VRAM page 0
 gfx_screen_state *screen_state_page_1;  // screen state for VRAM page 1
 
+gfx_sprite_to_draw *sprites_to_draw;
+word sprites_to_draw_count;
+
 int frame_number = 0;
 
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar) {
@@ -46,11 +49,11 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
 struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_tiles) {
     struct gfx_screen_state* screen_state;
     word tile_count = (word) horz_tiles * (word) vert_tiles;
-    dword bytes_to_allocate = sizeof(gfx_screen_state)
+    dword bytes_to_allocate = sizeof(struct gfx_screen_state)
         + sizeof(gfx_tile_state) * tile_count               // memory for tile index
         + sizeof(word) * tile_count                         // memory for tile to clear
         + sizeof(word) * tile_count                         // memory for tiles to update
-        + sizeof(gfx_sprite_to_draw) * 256;                 // memory for sprites to draw
+        + sizeof(struct gfx_sprite_to_draw) * 256;                 // memory for sprites to draw
 
     screen_state = (gfx_screen_state *) malloc(bytes_to_allocate);
 
@@ -62,12 +65,10 @@ struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_til
     screen_state->sprites_to_draw_count = 0;
 
     /* set pointers to contiguous memory locations */
-    /* TODO: ensure this way of allocating struct arrays is correct, currently
-       causing memory writing issues with 13 or more sprites on screen! */
     screen_state->tile_index = (gfx_tile_state *) screen_state + sizeof(struct gfx_screen_state);
     memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
-    screen_state->sprites_to_draw = (gfx_sprite_to_draw *) (screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count);
-    screen_state->tiles_to_clear = (word *) (screen_state->sprites_to_draw + sizeof(struct gfx_sprite_to_draw) * 256);
+    // screen_state->sprites_to_draw = (gfx_sprite_to_draw *) (screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count);
+    screen_state->tiles_to_clear = (word *) (screen_state->tile_index + sizeof(struct gfx_sprite_to_draw) * 256);
     screen_state->tiles_to_update = (word *) (screen_state->tiles_to_clear + sizeof(word) * tile_count);
 
     return screen_state;
@@ -87,7 +88,7 @@ void _set_tile_states(gfx_screen_state *screen_state, byte tile_state, bool clea
 }
 
 void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_buffer, word dest_x, word dest_y, word width, word height) {
-    gfx_sprite_to_draw *cur_sprite = &screen_state->sprites_to_draw[screen_state->sprites_to_draw_count++];
+    gfx_sprite_to_draw *cur_sprite = &sprites_to_draw[sprites_to_draw_count++];
     word max_width = MIN(PAGE_WIDTH, dest_x + width) - dest_x;
     word max_height = MIN(PAGE_HEIGHT, dest_y + height) - dest_y;
 
@@ -125,6 +126,11 @@ gfx_buffer* gfx_get_tileset_buffer() {
  * Handler for blitting entire main memory screen buffer into
  * the active page in VRAM
  **/
+void gfx_set_scroll_offset(byte x_offset, byte y_offset) {
+    view_scroll_x = x_offset;
+    view_scroll_y = y_offset;
+}
+
 void gfx_blit_screen_buffer() {
     vga_blit_buffer_to_vram(
         gfx_screen_buffer->buffer,
@@ -250,13 +256,20 @@ void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
     _gfx_add_sprite_to_draw(screen_state_current, bitmap, dest_x, dest_y, width, height);
 }
 
-void gfx_set_tile(byte tile, byte x, byte y) {
+void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte x, byte y) {
     word tile_offset = ((word) y * (word) render_tile_width) + (word) x;
-    /* update states for both pages so that states are immediately available for next page flip */
-    screen_state_page_0->tile_index[tile_offset].tile = tile;
-    screen_state_page_1->tile_index[tile_offset].tile = tile;
-    _set_tile_states(screen_state_page_0, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, x, y);
-    _set_tile_states(screen_state_page_1, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, x, y);
+    gfx_tile_state *tile_state = &screen_state->tile_index[tile_offset];
+
+    /* only mark tile as dirty if the tile has changed */
+    if(~(tile_state->state & GFX_TILE_STATE_TILE) || tile_state->tile != tile) {
+        tile_state->tile = tile;
+        _set_tile_states(screen_state, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, x, y);
+    }
+}
+
+void gfx_set_tile(byte tile, byte x, byte y) {
+    _set_tile_for_screen_state(screen_state_page_0, tile, x, y);
+    _set_tile_for_screen_state(screen_state_page_1, tile, x, y);
 }
 
 void _gfx_draw_tile_to_planar_screen(byte tile, word tile_x, word tile_y) {
@@ -329,7 +342,7 @@ void gfx_init_video() {
     vga_scroll_offset(0, 0);
     render_page_width = PAGE_WIDTH;
     render_page_height = PAGE_HEIGHT;
-    gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height, TRUE);
+    // gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height, TRUE);
 
     /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
     gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE);
@@ -347,6 +360,8 @@ void gfx_init_video() {
     screen_state_current = screen_state_page_1;
     current_render_page = 1;
     current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
+
+    sprites_to_draw = malloc(sizeof(struct gfx_sprite_to_draw) * 256);
 }
 
 /* this loads the tileset into the VRAM after the two pages */
@@ -434,8 +449,8 @@ void gfx_blit_sprites() {
         outp(SC_INDEX, MAP_MASK);
         outp(SC_DATA, 1 << plane);
 
-        for(i = 0; i < screen_state_current->sprites_to_draw_count; i++) {
-            cur_sprite = &screen_state_current->sprites_to_draw[i];
+        for(i = 0; i < sprites_to_draw_count; i++) {
+            cur_sprite = &sprites_to_draw[i];
             sprite_width = cur_sprite->width >> 2;
             sprite_height = cur_sprite->height;
             sprite_buffer = cur_sprite->sprite_buffer->buffer;
@@ -505,7 +520,7 @@ void gfx_render_all() {
     if (screen_state_current->tiles_to_update_count > 0)
         _gfx_blit_dirty_tiles(FALSE);
 
-    if(screen_state_current->sprites_to_draw_count > 0)
+    if(sprites_to_draw_count > 0)
         gfx_blit_sprites();
 
     /* page flip + scrolling */
@@ -513,7 +528,7 @@ void gfx_render_all() {
 
     /* clear buffers once rendering has finished */
     screen_state_current->tiles_to_update_count = 0;
-    screen_state_current->sprites_to_draw_count = 0;
+    sprites_to_draw_count = 0;
 
     current_render_page = 1 - current_render_page;
     screen_state_current = current_render_page ? screen_state_page_1 : screen_state_page_0;
