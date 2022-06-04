@@ -11,7 +11,6 @@ byte render_tile_height;                // rendering page height (in tiles)
 word render_tile_count;                 // total render tile count
 
 byte current_render_page = 0;           // current page displayed
-word current_render_page_offset = 0;    // current page offset in VRAM
 byte view_scroll_x = 0;                 // horizontal scroll value
 byte view_scroll_y = 0;                 // vertical scroll value
 
@@ -24,6 +23,8 @@ gfx_screen_state *screen_state_page_1;  // screen state for VRAM page 1
 
 gfx_sprite_to_draw *sprites_to_draw;
 word sprites_to_draw_count;
+
+gfx_tilemap *screen_tilemap;            // pointer to tilemap
 
 int frame_number = 0;
 
@@ -46,14 +47,14 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
     return empty_buffer;
 }
 
-struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_tiles) {
+struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
     struct gfx_screen_state* screen_state;
     word tile_count = (word) horz_tiles * (word) vert_tiles;
     dword bytes_to_allocate = sizeof(struct gfx_screen_state)
         + sizeof(gfx_tile_state) * tile_count               // memory for tile index
         + sizeof(word) * tile_count                         // memory for tile to clear
         + sizeof(word) * tile_count                         // memory for tiles to update
-        + sizeof(struct gfx_sprite_to_draw) * 256;                 // memory for sprites to draw
+        + sizeof(struct gfx_sprite_to_draw) * 256;          // memory for sprites to draw
 
     screen_state = (gfx_screen_state *) malloc(bytes_to_allocate);
 
@@ -65,13 +66,34 @@ struct gfx_screen_state* _initialize_screen_state(byte horz_tiles, byte vert_til
     screen_state->sprites_to_draw_count = 0;
 
     /* set pointers to contiguous memory locations */
-    screen_state->tile_index = (gfx_tile_state *) screen_state + sizeof(struct gfx_screen_state);
+    screen_state->tile_index = (gfx_tile_state *) (screen_state + sizeof(struct gfx_screen_state));
     memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
     // screen_state->sprites_to_draw = (gfx_sprite_to_draw *) (screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count);
     screen_state->tiles_to_clear = (word *) (screen_state->tile_index + sizeof(struct gfx_sprite_to_draw) * 256);
     screen_state->tiles_to_update = (word *) (screen_state->tiles_to_clear + sizeof(word) * tile_count);
 
     return screen_state;
+}
+
+struct gfx_tilemap* _init_tilemap(byte horz_tiles, byte vert_tiles) {
+    struct gfx_tilemap* tilemap;
+    word tile_count = (word) horz_tiles * (word) vert_tiles;
+    dword bytes_to_allocate = sizeof(struct gfx_tilemap)
+        + sizeof(gfx_tilemap) * tile_count;                 // memory for tilemap buffer
+
+    tilemap = (gfx_tilemap *) malloc(bytes_to_allocate);
+
+    tilemap->tile_count = tile_count;
+    tilemap->horz_tiles = horz_tiles;
+    tilemap->vert_tiles = vert_tiles;
+    tilemap->horz_offset = 0;
+    tilemap->vert_offset = 0;
+
+    /* set pointers to contiguous memory locations */
+    tilemap->buffer = (byte *) (tilemap + sizeof(struct gfx_tilemap));
+    memset(tilemap->buffer, 0, sizeof(byte) * tile_count);
+
+    return tilemap;
 }
 
 void _set_tile_states(gfx_screen_state *screen_state, byte tile_state, bool clear, byte x, byte y, byte max_x, byte max_y) {
@@ -116,6 +138,13 @@ gfx_buffer* gfx_get_tileset_buffer() {
 }
 
 /**
+ * Returns pointer to tilemap
+ **/
+gfx_tilemap* gfx_get_tilemap_buffer() {
+    return screen_tilemap;
+}
+
+/**
  * GRAPHICS API DEFINITIONS
  * 
  * These are the drawing routines that can be called
@@ -139,7 +168,7 @@ void gfx_blit_screen_buffer() {
         0,
         0,
         0,
-        current_render_page_offset,
+        screen_state_current->render_page_offset,
         PAGE_WIDTH,
         PAGE_HEIGHT
     );
@@ -256,20 +285,20 @@ void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y,
     _gfx_add_sprite_to_draw(screen_state_current, bitmap, dest_x, dest_y, width, height);
 }
 
-void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte x, byte y) {
+void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte x, byte y, bool force) {
     word tile_offset = ((word) y * (word) render_tile_width) + (word) x;
     gfx_tile_state *tile_state = &screen_state->tile_index[tile_offset];
 
     /* only mark tile as dirty if the tile has changed */
-    if(!(tile_state->state & GFX_TILE_STATE_TILE) || tile_state->tile != tile) {
+    if(!(tile_state->state & GFX_TILE_STATE_TILE) || tile_state->tile != tile || force) {
         tile_state->tile = tile;
         _set_tile_states(screen_state, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, x, y);
     }
 }
 
 void gfx_set_tile(byte tile, byte x, byte y) {
-    _set_tile_for_screen_state(screen_state_page_0, tile, x, y);
-    _set_tile_for_screen_state(screen_state_page_1, tile, x, y);
+    _set_tile_for_screen_state(screen_state_page_0, tile, x, y, FALSE);
+    _set_tile_for_screen_state(screen_state_page_1, tile, x, y, FALSE);
 }
 
 void _gfx_draw_tile_to_planar_screen(byte tile, word tile_x, word tile_y) {
@@ -353,15 +382,18 @@ void gfx_init_video() {
     // various tile buffer sizes determined by max number of tiles on-screen
     render_tile_count = (word) render_tile_width * (word) render_tile_height;
 
-    screen_state_page_0 = _initialize_screen_state(render_tile_width, render_tile_height);
-    screen_state_page_1 = _initialize_screen_state(render_tile_width, render_tile_height);
+    screen_state_page_0 = _init_screen_state(render_tile_width, render_tile_height);
+    screen_state_page_1 = _init_screen_state(render_tile_width, render_tile_height);
+    screen_state_page_0->render_page_offset = 0;
+    screen_state_page_1->render_page_offset = (word) current_render_page * PAGE_HEIGHT;
 
     /* set current rendering page to the offscreen one */
     screen_state_current = screen_state_page_1;
     current_render_page = 1;
-    current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
 
     sprites_to_draw = malloc(sizeof(struct gfx_sprite_to_draw) * 256);
+
+    screen_tilemap = _init_tilemap((SCREEN_WIDTH / TILE_WIDTH) * 2, (SCREEN_HEIGHT / TILE_HEIGHT) * 2);
 }
 
 /* this loads the tileset into the VRAM after the two pages */
@@ -383,7 +415,7 @@ void gfx_load_tileset() {
 
 void _gfx_blit_planar_screen() {
     int plane, offset = 0;
-    int initial_offset = (current_render_page_offset * PAGE_WIDTH) >> 2;
+    int initial_offset = (screen_state_current->render_page_offset * PAGE_WIDTH) >> 2;
     int buffer_size = gfx_screen_buffer->buffer_size >> 2;
     byte *screen_buffer = gfx_screen_buffer->buffer;
     byte *VGA = (byte *) 0xA0000;
@@ -419,7 +451,7 @@ void _gfx_blit_dirty_tiles(bool sprite_tiles) {
         tile_index = screen_state_current->tile_index[current_tile].tile;
         x = (word) (current_tile % render_tile_width) * TILE_WIDTH;
         y = (word) (current_tile / render_tile_width) * TILE_HEIGHT;
-        vga_offset = ((y + current_render_page_offset) * PAGE_WIDTH + x) >> 2;
+        vga_offset = ((y + screen_state_current->render_page_offset) * PAGE_WIDTH + x) >> 2;
         x = (word) (tile_index % render_tile_width) * TILE_WIDTH;
         y = (word) (tile_index / render_tile_width) * TILE_HEIGHT;
         tile_offset = ((y + PAGE_HEIGHT * 2) * PAGE_WIDTH + x) >> 2;
@@ -439,7 +471,7 @@ void _gfx_blit_dirty_tiles(bool sprite_tiles) {
 void gfx_blit_sprites() {
     byte plane, x_offset;
     dword i, x, y, sprite_width, sprite_height, sprite_offset, dest_x, dest_y, vga_offset;
-    dword initial_offset = (current_render_page_offset * PAGE_WIDTH) >> 2;
+    dword initial_offset = (screen_state_current->render_page_offset * PAGE_WIDTH) >> 2;
     byte *sprite_buffer;
     byte *VGA = (byte *) 0xA0000;
     gfx_sprite_to_draw *cur_sprite;
@@ -462,7 +494,7 @@ void gfx_blit_sprites() {
             sprite_offset = (cur_sprite->sprite_buffer->buffer_size >> 2) * (dword) x_offset;
     
             dest_x = (cur_sprite->dest_x + x_offset) >> 2;
-            dest_y = cur_sprite->dest_y + current_render_page_offset;
+            dest_y = cur_sprite->dest_y + screen_state_current->render_page_offset;
 
             for(x = 0; x < sprite_width; x++) {
                 vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + x;
@@ -472,6 +504,52 @@ void gfx_blit_sprites() {
                 }
             }
         }
+    }
+}
+
+void _scroll_screen_tiles_horizontally(gfx_screen_state* screen_state, gfx_tilemap* tilemap, bool scroll_left) {
+    byte x, y;
+    word tile_index_offset = 0, tilemap_offset;
+    gfx_tile_state *tile_index = screen_state->tile_index;
+    byte *tilemap_buffer = tilemap->buffer;
+
+    /* set horizontale tile offset for screen state */
+    if(scroll_left) {
+        if(tilemap->horz_offset == 0)
+            tilemap->horz_offset = tilemap->horz_tiles - screen_state->horz_tiles - 1;
+        else
+            tilemap->horz_offset--;
+
+        screen_state->render_page_offset -= TILE_WIDTH;
+        tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + (tilemap->horz_offset + screen_state->horz_tiles - 1);
+    } else {
+        if(tilemap->horz_offset == tilemap->horz_tiles - screen_state->horz_tiles - 1)
+            tilemap->horz_offset = 0;
+        else
+            tilemap->horz_offset++;
+
+        screen_state->render_page_offset += TILE_WIDTH;
+        tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset;
+    }
+
+    for(y = 0; y < screen_state->vert_tiles; y++) {        
+        if(scroll_left) {
+            /* shift all tiles to the right */
+            for(x = screen_state->horz_tiles - 1; x > 0; x--) {
+                tile_index[tile_index_offset + x + 1] = tile_index[tile_index_offset + x];
+            }
+            /* populate incoming tiles on the left */
+            _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset], 0, y, TRUE);
+        } else {
+            /* shift all tiles to the left */
+            for(x = 1; x < screen_state->horz_tiles; x++) {
+                tile_index[tile_index_offset + x - 1] = tile_index[tile_index_offset + x];
+            }
+            /* populate incoming tiles on the right */
+            _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset], screen_state->horz_tiles - 1, y, TRUE);
+        }
+        tile_index_offset += screen_state->vert_tiles;
+        tilemap_offset += tilemap->vert_tiles;
     }
 }
 
@@ -488,9 +566,6 @@ void gfx_render_all() {
     dword current_dirty_length;
 
     vga_wait_for_retrace();
-
-    /* switch to offscreen rendering page */
-    current_render_page_offset = (word) current_render_page * PAGE_HEIGHT;
 
     /* clear tiles that have had sprites rendered to them previously */
     if (screen_state_current->tiles_to_clear_count > 0)
@@ -524,7 +599,9 @@ void gfx_render_all() {
         gfx_blit_sprites();
 
     /* page flip + scrolling */
-    vga_scroll_offset((word) view_scroll_x, current_render_page_offset + view_scroll_y);
+    vga_scroll_offset((word) view_scroll_x, screen_state_current->render_page_offset + view_scroll_y);
+
+    // _scroll_screen_tiles_horizontally(screen_state_current, screen_tilemap, FALSE);
 
     /* clear buffers once rendering has finished */
     screen_state_current->tiles_to_update_count = 0;

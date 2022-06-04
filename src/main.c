@@ -380,12 +380,20 @@ int test_vga(){
     return 0;
 }
 
-int test_scroll(){
-    int i, offset, x, y, tile_offset_x = 0, tile_offset_y = 0, pos_x = 0, pos_y = 0;
+int test_scroll(int testobj_max){
+    int i, j, k, offset, x, y, tile_offset_x = 0, tile_offset_y = 0, pos_x = 0, pos_y = 0;
     gfx_buffer *tileset_buffer;
+    gfx_buffer *sprite_buffer;
     byte palette[256*3];
     byte *tilemap = malloc(4096);
     char ch;
+    int testobj_count = 0;
+
+    testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
+    testobj *cur_testobj;
+
+    sprite_buffer = gfx_create_empty_buffer(0, TILE_WIDTH / 2, TILE_HEIGHT / 2, TRUE);
+    render_pattern_to_buffer_2(sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
     offset = 0;
     i = 0;
@@ -422,17 +430,42 @@ int test_scroll(){
     tile_offset_y = 0;
     i = 0;
     while (1) {
-        if(pos_x / TILE_WIDTH != tile_offset_x || pos_y / TILE_HEIGHT != tile_offset_y) {
-            tile_offset_x = pos_x / TILE_WIDTH;
-            tile_offset_y = pos_y / TILE_HEIGHT;
-            for(y = 0; y < 16; y++) {
-                for(x = 0; x < 21; x++) {
-                    offset = (y + tile_offset_y) * 64 + x + tile_offset_x;
-                    gfx_set_tile(tilemap[offset], x, y);
-                }
+        for(j = 0; j < testobj_count; j++) {
+            cur_testobj = &testobj_list[j];
+            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height);
+
+            cur_testobj->xpos += cur_testobj->hspeed;
+            cur_testobj->ypos += cur_testobj->vspeed;
+            if(cur_testobj->xpos > (320 - sprite_buffer->width) || cur_testobj->xpos < 0) {
+                if(cur_testobj->xpos > (320 - sprite_buffer->width)) cur_testobj->xpos = (320 - sprite_buffer->width);
+                else if(cur_testobj->xpos < 0) cur_testobj->xpos = 0;
+                cur_testobj->hspeed = -(cur_testobj->hspeed);
+            }
+
+            if(cur_testobj->ypos > (240 - sprite_buffer->height) || cur_testobj->ypos < 0) {
+                if(cur_testobj->ypos > (240 - sprite_buffer->height)) cur_testobj->ypos = (240 - sprite_buffer->height);
+                else if(cur_testobj->ypos < 0) cur_testobj->ypos = 0;
+                cur_testobj->vspeed = -(cur_testobj->vspeed);
             }
         }
-        gfx_set_scroll_offset(pos_x++ % TILE_WIDTH, pos_y++ % TILE_HEIGHT);
+        if(k++ % 30 == 0 && testobj_count < testobj_max){
+            cur_testobj = &testobj_list[testobj_count++];
+            cur_testobj->xpos = rand() % (320 - sprite_buffer->width);
+            cur_testobj->ypos = rand() % (240 - sprite_buffer->height);
+            cur_testobj->hspeed = 1 + rand() % 5;
+            cur_testobj->vspeed = 1 + rand() % 5;
+        }
+        // if(pos_x / TILE_WIDTH != tile_offset_x || pos_y / TILE_HEIGHT != tile_offset_y) {
+        //     tile_offset_x = pos_x / TILE_WIDTH;
+        //     tile_offset_y = pos_y / TILE_HEIGHT;
+        //     for(y = 0; y < 16; y++) {
+        //         for(x = 0; x < 21; x++) {
+        //             offset = (y + tile_offset_y) * 64 + x + tile_offset_x;
+        //             gfx_set_tile(tilemap[offset], x, y);
+        //         }
+        //     }
+        // }
+        // gfx_set_scroll_offset(pos_x++ % TILE_WIDTH, pos_y % TILE_HEIGHT);
         gfx_render_all();
         if(kbhit()) {
             ch = getch();
@@ -451,12 +484,10 @@ int main(int argc, char *argv[]) {
     char *a = argv[1];
     int num = atoi(a);
 
-    // if(argc >= 2)
-    //     return test_tile_routine(num);
-    // else
-    //     return test_tile_routine(256);
-
-    return test_scroll();
+    if(argc >= 2)
+        return test_scroll(num);
+    else
+        return test_scroll(256);
 
     // return test_vga();
 }
