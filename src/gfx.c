@@ -261,7 +261,7 @@ void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte 
     gfx_tile_state *tile_state = &screen_state->tile_index[tile_offset];
 
     /* only mark tile as dirty if the tile has changed */
-    if(~(tile_state->state & GFX_TILE_STATE_TILE) || tile_state->tile != tile) {
+    if(!(tile_state->state & GFX_TILE_STATE_TILE) || tile_state->tile != tile) {
         tile_state->tile = tile;
         _set_tile_states(screen_state, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, x, y, x, y);
     }

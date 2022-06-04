@@ -381,10 +381,11 @@ int test_vga(){
 }
 
 int test_scroll(){
-    int i, offset, x, y, tile_offset_x, tile_offset_y, pos_x, pos_y;
+    int i, offset, x, y, tile_offset_x = 0, tile_offset_y = 0, pos_x = 0, pos_y = 0;
     gfx_buffer *tileset_buffer;
     byte palette[256*3];
     byte *tilemap = malloc(4096);
+    char ch;
 
     offset = 0;
     i = 0;
@@ -411,7 +412,7 @@ int test_scroll(){
     for(y = 0; y < 16; y++) {
         for(x = 0; x < 21; x++) {
             offset = (y + tile_offset_y) * 64 + x + tile_offset_x;
-            gfx_set_tile(offset, x, y);
+            gfx_set_tile(tilemap[offset], x, y);
         }
     }
 
@@ -420,21 +421,24 @@ int test_scroll(){
     tile_offset_x = 0;
     tile_offset_y = 0;
     i = 0;
-    while (!_kbhit()){
-        if(i++ % 15 == 0) {
-            gfx_set_scroll_offset(pos_x++ % TILE_WIDTH, pos_y++ % TILE_HEIGHT);
-            if(pos_x / TILE_WIDTH != tile_offset_x || pos_y / TILE_HEIGHT != tile_offset_y) {
-                tile_offset_x = pos_x / TILE_WIDTH;
-                tile_offset_y = pos_y / TILE_HEIGHT;
-                for(y = 0; y < 16; y++) {
-                    for(x = 0; x < 21; x++) {
-                        offset = (y + tile_offset_y) * 64 + x + tile_offset_x;
-                        gfx_set_tile(offset, x, y);
-                    }
+    while (1) {
+        if(pos_x / TILE_WIDTH != tile_offset_x || pos_y / TILE_HEIGHT != tile_offset_y) {
+            tile_offset_x = pos_x / TILE_WIDTH;
+            tile_offset_y = pos_y / TILE_HEIGHT;
+            for(y = 0; y < 16; y++) {
+                for(x = 0; x < 21; x++) {
+                    offset = (y + tile_offset_y) * 64 + x + tile_offset_x;
+                    gfx_set_tile(tilemap[offset], x, y);
                 }
             }
         }
+        gfx_set_scroll_offset(pos_x++ % TILE_WIDTH, pos_y++ % TILE_HEIGHT);
         gfx_render_all();
+        if(kbhit()) {
+            ch = getch();
+            if(ch == 27)
+                break;
+        }
     }
 
     vga_exit_modex();
