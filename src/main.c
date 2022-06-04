@@ -385,7 +385,6 @@ int test_scroll(int testobj_max){
     gfx_buffer *tileset_buffer;
     gfx_buffer *sprite_buffer;
     byte palette[256*3];
-    byte *tilemap = malloc(4096);
     char ch;
     int testobj_count = 0;
 
@@ -395,34 +394,10 @@ int test_scroll(int testobj_max){
     sprite_buffer = gfx_create_empty_buffer(0, TILE_WIDTH / 2, TILE_HEIGHT / 2, TRUE);
     render_pattern_to_buffer_2(sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
-    offset = 0;
-    i = 0;
-    for(y = 0; y < 16; y++) {
-        for(x = 0; x < 16; x++) {
-            tilemap[offset] = i;
-            tilemap[offset + 16] = i;
-            tilemap[offset + 32] = i;
-            tilemap[offset + 48] = i;
-            i++;
-        }
-        offset += 64;
-    }
-
-    memcpy(&tilemap[1024], &tilemap[0], 1024);
-    memcpy(&tilemap[2048], &tilemap[0], 1024);
-    memcpy(&tilemap[3072], &tilemap[0], 1024);
-
     gfx_init_video();
     tileset_buffer = gfx_get_tileset_buffer();
     render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
     gfx_load_tileset();
-
-    for(y = 0; y < 16; y++) {
-        for(x = 0; x < 21; x++) {
-            offset = (y + tile_offset_y) * 64 + x + tile_offset_x;
-            gfx_set_tile(tilemap[offset], x, y);
-        }
-    }
 
     pos_x = 0;
     pos_y = 0;
@@ -466,6 +441,8 @@ int test_scroll(int testobj_max){
         //     }
         // }
         // gfx_set_scroll_offset(pos_x++ % TILE_WIDTH, pos_y % TILE_HEIGHT);
+        pos_x++;
+        // pos_y++;
         gfx_render_all();
         if(kbhit()) {
             ch = getch();
@@ -475,6 +452,8 @@ int test_scroll(int testobj_max){
     }
 
     vga_exit_modex();
+
+    printf("total objects rendered: %d\n", testobj_count);
 
     return 0;
 }

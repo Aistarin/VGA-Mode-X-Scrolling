@@ -138,7 +138,8 @@ void vga_scroll_offset(word offset_x, word offset_y)
     word y = offset_y;
 
 	byte ac;
-    y = (y * (PAGE_WIDTH >> 2)) + (x>>2);
+    // y = (y * (PAGE_WIDTH >> 2)) + (x>>2);
+    y += (x >> 2);
 
 	//change scroll registers: HIGH_ADDRESS 0x0C; LOW_ADDRESS 0x0D
     outpw(CRTC_INDEX, 0x0D | (y << 8));  // low address

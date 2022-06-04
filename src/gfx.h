@@ -47,7 +47,8 @@ typedef struct gfx_tile_state {
 } gfx_tile_state;
 
 typedef struct gfx_screen_state {
-    dword render_page_offset;               // current VRAM offset
+    dword initial_render_page_offset;       // initial VRAM offset
+    dword current_render_page_offset;       // current VRAM offset
     word tile_count;                        // number of tiles total
     byte horz_tiles;                        // number of horizontal tiles
     byte vert_tiles;                        // number of vertical tiles
