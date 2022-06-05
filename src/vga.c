@@ -131,19 +131,13 @@ void vga_blit_buffer_to_vram(byte * buffer, word buffer_width, word buffer_heigh
     }
 }
 
-//wait for the VGA to stop drawing, and set scroll and Pel panning
-void vga_scroll_offset(word offset_x, word offset_y)
-{
-    word x = offset_x;
-    word y = offset_y;
+void vga_set_offset(word offset) {
+    outpw(CRTC_INDEX, 0x0D | (offset << 8));  // low address
+    outpw(CRTC_INDEX, 0x0C | (offset & 0xff00));  // high address
+}
 
-	byte ac;
-    // y = (y * (PAGE_WIDTH >> 2)) + (x>>2);
-    y += (x >> 2);
-
-	//change scroll registers: HIGH_ADDRESS 0x0C; LOW_ADDRESS 0x0D
-    outpw(CRTC_INDEX, 0x0D | (y << 8));  // low address
-    outpw(CRTC_INDEX, 0x0C | (y & 0xff00));  // high address
+void vga_set_horizontal_pan(byte pan_value) {
+    byte ac;
 
     // _disable();
 
@@ -152,11 +146,24 @@ void vga_scroll_offset(word offset_x, word offset_y)
 
 	//pixel panning value		
 	outp(AC_INDEX, 0x33);
-	outp(AC_INDEX, p[x & 3]);
+	outp(AC_INDEX, p[pan_value & 3]);
 
     // _enable();
 
     // outp(AC_INDEX, ac);
+}
+
+//wait for the VGA to stop drawing, and set scroll and Pel panning
+void vga_scroll_offset(word offset_x, word offset_y)
+{
+    word x = offset_x;
+    word y = offset_y;
+
+	byte ac;
+    y = (y * (PAGE_WIDTH >> 2)) + (x>>2);
+
+    vga_set_offset(y);
+    vga_set_horizontal_pan(x);
 }
 
 void vga_blit_vram_to_vram(word source_x, word source_y, word dest_x, word dest_y, word width, word height) {

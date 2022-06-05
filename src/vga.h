@@ -50,5 +50,7 @@ void vga_scroll_offset(word offset_x, word offset_y);
 void vga_blit_vram_to_vram(word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 void vga_blit_buffer_to_vram(byte * buffer, word buffer_width, word buffer_height, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 void vga_fill_vram_with_color(byte color, word dest_x, word dest_y, word width, word height);
+void vga_set_offset(word offset);
+void vga_set_horizontal_pan(byte pan_value);
 
 #endif
