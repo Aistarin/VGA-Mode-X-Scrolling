@@ -416,13 +416,13 @@ int test_scroll(int testobj_max){
         x = i % 16 + 2;
         y = i / 16;
         gfx_set_tile(i, x, y);
-        tilemap_buffer->buffer[y * 256 + x] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x] = (byte) i;
     }
 
     for(i = 0; i < 256; i++){
         x = i % 16 + 21;
         y = i / 16;
-        tilemap_buffer->buffer[y * 256 + x] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x] = (byte) i;
     }
         
 
@@ -447,14 +447,16 @@ int test_scroll(int testobj_max){
             else if(ch == 115)  // s
                 pos_y++;
             else if(ch == 97)   // a
-                pos_x -= TILE_WIDTH / 2;
+                pos_x --;
             else if(ch == 100)  // d
-                pos_x += TILE_WIDTH / 2;
+                pos_x ++;
         }
         if(pos_y < 0)
             pos_y = 0;
         if(pos_x < 0)
             pos_x = 0;
+        /* scroll screen before drawing sprites */
+        gfx_set_scroll_offset(pos_x, pos_y);
         for(j = 0; j < testobj_count; j++) {
             cur_testobj = &testobj_list[j];
             gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height);
@@ -490,7 +492,6 @@ int test_scroll(int testobj_max){
         //         }
         //     }
         // }
-        gfx_set_scroll_offset(pos_x, pos_y);
         gfx_render_all();
     }
 

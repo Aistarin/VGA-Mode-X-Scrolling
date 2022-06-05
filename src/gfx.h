@@ -63,8 +63,8 @@ typedef struct gfx_screen_state {
 
 typedef struct gfx_tilemap {
     word tile_count;                        // number of tiles total
-    word horz_tiles;                        // number of horizontal tiles
-    word vert_tiles;                        // number of vertical tiles
+    byte horz_tiles;                        // number of horizontal tiles
+    byte vert_tiles;                        // number of vertical tiles
     byte horz_offset;                       // current horizontal tile offset
     byte vert_offset;                       // current vertical tile offset
     byte *buffer;                           // array of bytes that holds the tilemap data
