@@ -63,8 +63,8 @@ typedef struct gfx_screen_state {
 
 typedef struct gfx_tilemap {
     word tile_count;                        // number of tiles total
-    byte horz_tiles;                        // number of horizontal tiles
-    byte vert_tiles;                        // number of vertical tiles
+    word horz_tiles;                        // number of horizontal tiles
+    word vert_tiles;                        // number of vertical tiles
     byte horz_offset;                       // current horizontal tile offset
     byte vert_offset;                       // current vertical tile offset
     byte *buffer;                           // array of bytes that holds the tilemap data
@@ -83,7 +83,7 @@ void gfx_load_tileset();
 void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
 void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 void gfx_load_linear_bitmap_to_planar_bitmap(byte *source_bitmap, byte *dest_bitmap, word width, word height);
-void gfx_set_scroll_offset(byte x_offset, byte y_offset);
+void gfx_set_scroll_offset(word x_offset, word y_offset);
 gfx_tilemap* gfx_get_tilemap_buffer();
 
 #endif

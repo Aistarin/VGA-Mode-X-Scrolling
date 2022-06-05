@@ -391,7 +391,7 @@ int test_scroll(int testobj_max){
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
 
-    sprite_buffer = gfx_create_empty_buffer(0, TILE_WIDTH / 2, TILE_HEIGHT / 2, TRUE);
+    sprite_buffer = gfx_create_empty_buffer(0, TILE_WIDTH, TILE_HEIGHT, TRUE);
     render_pattern_to_buffer_2(sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
     gfx_init_video();
@@ -440,7 +440,7 @@ int test_scroll(int testobj_max){
         //         }
         //     }
         // }
-        // gfx_set_scroll_offset(pos_x++ % TILE_WIDTH, pos_y % TILE_HEIGHT);
+        // gfx_set_scroll_offset(pos_x++, pos_y);
         pos_x++;
         // pos_y++;
         gfx_render_all();
