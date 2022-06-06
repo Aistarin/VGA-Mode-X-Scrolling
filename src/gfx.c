@@ -514,23 +514,25 @@ void _scroll_screen_tiles_horizontally(gfx_screen_state* screen_state, gfx_tilem
     byte *tilemap_buffer = tilemap->buffer;
 
     /* set horizontale tile offset for screen state */
-    screen_state->current_render_page_offset += (scroll_left ? -1 : 1) * TILE_WIDTH >> 2;
-    tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset + ((render_tile_width - 1) * scroll_left);
-    // if(scroll_left) {
-    //     screen_state->current_render_page_offset -= TILE_WIDTH >> 2;
-    //     tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + (tilemap->horz_offset + render_tile_width - 1);
-    // } else {
-    //     screen_state->current_render_page_offset += TILE_WIDTH >> 2;
-    //     if(screen_state->current_render_page_offset - screen_state->initial_render_page_offset > (PAGE_WIDTH * TILE_HEIGHT) >> 2)
-    //         screen_state->current_render_page_offset = screen_state->initial_render_page_offset;
-    //     tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset;
-    // }
+    // screen_state->current_render_page_offset += (scroll_left ? -1 : 1) * TILE_WIDTH >> 2;
+    // tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset + ((render_tile_width - 1) * scroll_left);
+    if(scroll_left) {
+        screen_state->current_render_page_offset -= TILE_WIDTH >> 2;
+        // if(screen_state->initial_render_page_offset == screen_state->current_render_page_offset)
+        //     screen_state->current_render_page_offset = (PAGE_WIDTH * TILE_HEIGHT) >> 2;
+        tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset - 1;
+    } else {
+        screen_state->current_render_page_offset += TILE_WIDTH >> 2;
+        if(screen_state->current_render_page_offset - screen_state->initial_render_page_offset > (PAGE_WIDTH * TILE_HEIGHT) >> 2)
+            screen_state->current_render_page_offset = screen_state->initial_render_page_offset;
+        tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + (tilemap->horz_offset + render_tile_width - 1);
+    }
 
     for(y = 0; y < render_tile_height; y++) {        
         if(scroll_left) {
             /* shift all tiles to the right */
             for(x = render_tile_width - 1; x > 0; x--) {
-                screen_state->tile_index[tile_index_offset + x + 1] = screen_state->tile_index[tile_index_offset + x];
+                screen_state->tile_index[tile_index_offset + x] = screen_state->tile_index[tile_index_offset + x - 1];
             }
             /* populate incoming tiles on the left */
             _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset], 0, y, TRUE);
@@ -594,14 +596,15 @@ void _scroll_screen_tiles_vertically(gfx_screen_state* screen_state, gfx_tilemap
 }
 
 void _scroll_tiles_horizontally(gfx_tilemap* tilemap, bool scroll_left) {
+    /* update tiles for both pages */
+    _scroll_screen_tiles_horizontally(screen_state_page_0, tilemap, scroll_left);
+    _scroll_screen_tiles_horizontally(screen_state_page_1, tilemap, scroll_left);
+
     /* set new horizontal tile offset */
     tilemap->horz_offset += scroll_left ? -1 : 1;
     /* modulus to account for overflow */
     tilemap->horz_offset %= 256;
 
-    /* update tiles for both pages */
-    _scroll_screen_tiles_horizontally(screen_state_page_0, tilemap, scroll_left);
-    _scroll_screen_tiles_horizontally(screen_state_page_1, tilemap, scroll_left);
 }
 
 void _scroll_tiles_vertically(gfx_tilemap* tilemap, bool scroll_up) {

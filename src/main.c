@@ -394,15 +394,18 @@ int test_scroll(int testobj_max){
     testobj *cur_testobj;
 
     test_buffer = gfx_create_empty_buffer(0, TILE_WIDTH, TILE_HEIGHT, FALSE);
-    sprite_buffer = gfx_create_empty_buffer(0, test_buffer->width, test_buffer->height, TRUE);
 
+    sprite_buffer = gfx_create_empty_buffer(0, test_buffer->width, test_buffer->height, TRUE);
     render_pattern_to_buffer_2(test_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
+    gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, test_buffer->width, test_buffer->height);
 
     gfx_init_video();
+
     tileset_buffer = gfx_get_tileset_buffer();
     render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+    // load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
+    // vga_set_palette(palette, 0, 255);
     gfx_load_tileset();
-    gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, test_buffer->width, test_buffer->height);
 
     tilemap_buffer = gfx_get_tilemap_buffer();
 
@@ -447,9 +450,9 @@ int test_scroll(int testobj_max){
             else if(ch == 115)  // s
                 pos_y++;
             else if(ch == 97)   // a
-                pos_x --;
+                pos_x -= TILE_WIDTH / 4;
             else if(ch == 100)  // d
-                pos_x ++;
+                pos_x += TILE_WIDTH / 4;
         }
         if(pos_y < 0)
             pos_y = 0;
