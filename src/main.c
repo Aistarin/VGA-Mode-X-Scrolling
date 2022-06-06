@@ -402,38 +402,31 @@ int test_scroll(int testobj_max){
     gfx_init_video();
 
     tileset_buffer = gfx_get_tileset_buffer();
-    render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
-    // load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
-    // vga_set_palette(palette, 0, 255);
+    // render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+    load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
+    vga_set_palette(palette, 0, 255);
     gfx_load_tileset();
 
     tilemap_buffer = gfx_get_tilemap_buffer();
 
-    for(i = 0; i < 32; i++)
-        gfx_set_tile(0, i % 2, i / 2);
-
-    for(i = 0; i < 48; i++)
-        gfx_set_tile(0, i % 3 + 18, i / 3);
-
     for(i = 0; i < 256; i++){
-        x = i % 16 + 2;
-        y = i / 16;
-        gfx_set_tile(i, x, y);
-        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x] = (byte) i;
-    }
-
-    for(i = 0; i < 256; i++){
-        x = i % 16 + 21;
+        x = i % 16;
         y = i / 16;
         tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 16] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 32] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 48] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 64] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 80] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 96] = (byte) i;
+        tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 112] = (byte) i;
     }
-        
 
-    // for(i = 0; i < 21; i++)
-    //     gfx_set_tile(255, i, 7);
-
-    // for(i = 0; i < 32; i++)
-    //     gfx_set_tile(255, i % 2 + 9, i / 2);
+    for(i = 0; i < 336; i++) {
+        x = i % 21;
+        y = i / 21;
+        gfx_set_tile(tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x], x, y);
+    }
 
     pos_x = 0;
     pos_y = 0;
@@ -485,16 +478,6 @@ int test_scroll(int testobj_max){
             cur_testobj->hspeed = 1 + rand() % 5;
             cur_testobj->vspeed = 1 + rand() % 5;
         }
-        // if(pos_x / TILE_WIDTH != tile_offset_x || pos_y / TILE_HEIGHT != tile_offset_y) {
-        //     tile_offset_x = pos_x / TILE_WIDTH;
-        //     tile_offset_y = pos_y / TILE_HEIGHT;
-        //     for(y = 0; y < 16; y++) {
-        //         for(x = 0; x < 21; x++) {
-        //             offset = (y + tile_offset_y) * 64 + x + tile_offset_x;
-        //             gfx_set_tile(tilemap[offset], x, y);
-        //         }
-        //     }
-        // }
         gfx_render_all();
     }
 

@@ -525,7 +525,7 @@ void _scroll_screen_tiles_horizontally(gfx_screen_state* screen_state, gfx_tilem
         screen_state->current_render_page_offset += TILE_WIDTH >> 2;
         if(screen_state->current_render_page_offset - screen_state->initial_render_page_offset > (PAGE_WIDTH * TILE_HEIGHT) >> 2)
             screen_state->current_render_page_offset = screen_state->initial_render_page_offset;
-        tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + (tilemap->horz_offset + render_tile_width - 1);
+        tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + (tilemap->horz_offset + render_tile_width);
     }
 
     for(y = 0; y < render_tile_height; y++) {        
