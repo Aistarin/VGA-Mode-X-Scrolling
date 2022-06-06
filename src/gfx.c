@@ -518,8 +518,8 @@ void _scroll_screen_tiles_horizontally(gfx_screen_state* screen_state, gfx_tilem
     // tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset + ((render_tile_width - 1) * scroll_left);
     if(scroll_left) {
         screen_state->current_render_page_offset -= TILE_WIDTH >> 2;
-        // if(screen_state->initial_render_page_offset == screen_state->current_render_page_offset)
-        //     screen_state->current_render_page_offset = (PAGE_WIDTH * TILE_HEIGHT) >> 2;
+        if(screen_state->current_render_page_offset < screen_state->initial_render_page_offset)
+            screen_state->current_render_page_offset = (PAGE_WIDTH * TILE_HEIGHT) >> 2;
         tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset - 1;
     } else {
         screen_state->current_render_page_offset += TILE_WIDTH >> 2;
