@@ -443,9 +443,9 @@ int test_scroll(int testobj_max){
             else if(ch == 115)  // s
                 pos_y++;
             else if(ch == 97)   // a
-                pos_x -= TILE_WIDTH / 4;
+                pos_x--;
             else if(ch == 100)  // d
-                pos_x += TILE_WIDTH / 4;
+                pos_x++;
         }
         if(pos_y < 0)
             pos_y = 0;
