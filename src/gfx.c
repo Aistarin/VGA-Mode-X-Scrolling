@@ -63,12 +63,10 @@ struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
     screen_state->vert_tiles = vert_tiles;
     screen_state->tiles_to_clear_count = 0;
     screen_state->tiles_to_update_count = 0;
-    screen_state->sprites_to_draw_count = 0;
 
     /* set pointers to contiguous memory locations */
     screen_state->tile_index = (gfx_tile_state *) (screen_state + sizeof(struct gfx_screen_state));
     memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
-    // screen_state->sprites_to_draw = (gfx_sprite_to_draw *) (screen_state->tile_index + sizeof(struct gfx_tile_state) * tile_count);
     screen_state->tiles_to_clear = (word *) (screen_state->tile_index + sizeof(struct gfx_sprite_to_draw) * 256);
     screen_state->tiles_to_update = (word *) (screen_state->tiles_to_clear + sizeof(word) * tile_count);
 
@@ -514,8 +512,12 @@ void _scroll_screen_tiles_horizontally(gfx_screen_state* screen_state, gfx_tilem
     word tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset + (scroll_left ? -1 : render_tile_width);
     byte *tilemap_buffer = tilemap->buffer;
 
+    /* set horizontale tile offset for screen state */
+    screen_state->current_render_page_offset += (scroll_left ? -1 : 1) * TILE_WIDTH >> 2;
+
     for(y = 0; y < render_tile_height; y++) {        
         if(scroll_left) {
+            /* TODO: handle case where offset goes beyond the limit */
             /* shift all tiles to the right */
             for(x = render_tile_width - 1; x > 0; x--) {
                 screen_state->tile_index[tile_index_offset + x] = screen_state->tile_index[tile_index_offset + x - 1];
@@ -523,6 +525,7 @@ void _scroll_screen_tiles_horizontally(gfx_screen_state* screen_state, gfx_tilem
             /* populate incoming tiles on the left */
             _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset], 0, y, TRUE);
         } else {
+            /* TODO: handle case where offset goes below zero and wraps around */
             /* shift all tiles to the left */
             for(x = 1; x < render_tile_width; x++) {
                 screen_state->tile_index[tile_index_offset + x - 1] = screen_state->tile_index[tile_index_offset + x];
@@ -533,9 +536,6 @@ void _scroll_screen_tiles_horizontally(gfx_screen_state* screen_state, gfx_tilem
         tile_index_offset += render_tile_width;
         tilemap_offset += tilemap->horz_tiles;
     }
-
-    /* set horizontale tile offset for screen state */
-    screen_state->current_render_page_offset += (scroll_left ? -1 : 1) * TILE_WIDTH >> 2;
 
     if(screen_state->current_render_page_offset - screen_state->initial_render_page_offset >= (PAGE_WIDTH >> 2) * TILE_HEIGHT) {
         screen_state->current_render_page_offset = screen_state->initial_render_page_offset;
@@ -565,7 +565,11 @@ void _scroll_screen_tiles_vertically(gfx_screen_state* screen_state, gfx_tilemap
     word tilemap_offset = (tilemap->vert_offset + (scroll_up ? -1 : (render_tile_height))) * tilemap->horz_tiles + tilemap->horz_offset;
     byte *tilemap_buffer = tilemap->buffer;
 
+    /* set vertical tile offset for screen state */
+    screen_state->current_render_page_offset += (scroll_up ? -1 : 1) * (((render_tile_width * TILE_WIDTH) >> 2) * TILE_HEIGHT);
+
     if(scroll_up) {
+        /* TODO: handle case where offset goes below zero and wraps around */
         for(y = render_tile_height - 1; y > 0; y--)
             memcpy(
                 &screen_state->tile_index[y * render_tile_width],
@@ -575,6 +579,7 @@ void _scroll_screen_tiles_vertically(gfx_screen_state* screen_state, gfx_tilemap
         for(x = 0; x < render_tile_width; x++)
             _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset + x], x, 0, TRUE);
     } else {
+        /* TODO: handle case where offset goes beyond the limit */
         for(y = 1; y <= render_tile_height - 1; y++)
             memcpy(
                 &screen_state->tile_index[(y - 1) * render_tile_width],
@@ -584,9 +589,6 @@ void _scroll_screen_tiles_vertically(gfx_screen_state* screen_state, gfx_tilemap
         for(x = 0; x < render_tile_width; x++)
             _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset + x], x, render_tile_height - 1, TRUE);
     }
-
-    /* set vertical tile offset for screen state */
-    screen_state->current_render_page_offset += (scroll_up ? -1 : 1) * (((render_tile_width * TILE_WIDTH) >> 2) * TILE_HEIGHT);
 
     if(screen_state->current_render_page_offset - screen_state->initial_render_page_offset >= (PAGE_WIDTH >> 2) * TILE_HEIGHT) {
         screen_state->current_render_page_offset = screen_state->initial_render_page_offset;
