@@ -372,6 +372,7 @@ void gfx_init_video() {
     gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE);
 
     render_tile_width = render_page_width / TILE_WIDTH;
+    /* render tile height is screen hight in tiles + 1 tile*/
     render_tile_height = render_page_height / TILE_HEIGHT - 1;
 
     // various tile buffer sizes determined by max number of tiles on-screen
@@ -510,14 +511,26 @@ void _scroll_screen_tiles(gfx_screen_state* screen_state, gfx_tilemap* tilemap, 
     word i;
     word tile_index_offset = 0;
     word tilemap_offset;
+    word tile_row_size = (PAGE_WIDTH >> 2) * TILE_HEIGHT;
     bool scroll_up = vert_tile_offset < 0;
     bool scroll_down = vert_tile_offset > 0;
     bool scroll_left = horz_tile_offset < 0;
     bool scroll_right = horz_tile_offset > 0;
     byte *tilemap_buffer = tilemap->buffer;
+    bool bottom_of_page = FALSE;
+    bool top_of_page = FALSE;
 
     /* set horizontal and vertical offset for screen state */
     screen_state->current_render_page_offset += (horz_tile_offset * TILE_WIDTH >> 2) + (vert_tile_offset * (((render_tile_width * TILE_WIDTH) >> 2) * TILE_HEIGHT));
+
+    /* bounds checks to determine whether or not new offset will
+       push rendering past bottom or top of its page*/
+    bottom_of_page = screen_state->current_render_page_offset - screen_state->initial_render_page_offset >= tile_row_size;
+    top_of_page = screen_state->current_render_page_offset < screen_state->initial_render_page_offset;
+
+    if(bottom_of_page) {
+        screen_state->current_render_page_offset -= tile_row_size;
+    }
 
     if(scroll_left || scroll_right) {
         tilemap_offset = tilemap->vert_offset * tilemap->vert_tiles + tilemap->horz_offset + (scroll_left ? -1 : render_tile_width);
@@ -552,8 +565,8 @@ void _scroll_screen_tiles(gfx_screen_state* screen_state, gfx_tilemap* tilemap, 
     }
 
     if(scroll_up || scroll_down) {
-        tilemap_offset = (tilemap->vert_offset + (scroll_up ? -1 : (render_tile_height))) * tilemap->horz_tiles + tilemap->horz_offset;
         if(scroll_up) {
+            tilemap_offset = (tilemap->vert_offset - 1) * tilemap->horz_tiles + tilemap->horz_offset;
             /* TODO: handle case where offset goes below zero and wraps around */
             for(y = render_tile_height - 1; y > 0; y--)
                 memcpy(
@@ -563,38 +576,42 @@ void _scroll_screen_tiles(gfx_screen_state* screen_state, gfx_tilemap* tilemap, 
                 );
             for(x = 0; x < render_tile_width; x++)
                 _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset + x], x, 0, TRUE);
-        } else {
-            /* TODO: handle case where offset goes beyond the limit */
-            for(y = 1; y <= render_tile_height - 1; y++)
-                memcpy(
-                    &screen_state->tile_index[(y - 1) * render_tile_width],
-                    &screen_state->tile_index[y * render_tile_width],
-                    sizeof(gfx_tile_state) * render_tile_width
-                );
-            for(x = 0; x < render_tile_width; x++)
-                _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset + x], x, render_tile_height - 1, TRUE);
+        } else if(scroll_down) {
+            tilemap_offset = (tilemap->vert_offset + render_tile_height) * tilemap->horz_tiles + tilemap->horz_offset;
+            if(bottom_of_page) {
+                for(y = render_tile_height - 1; y > 0; y--) {
+                    memcpy(
+                        &screen_state->tile_index[y * render_tile_width],
+                        &screen_state->tile_index[(y - 1) * render_tile_width],
+                        sizeof(gfx_tile_state) * render_tile_width
+                    );
+                    for(x = 0; x < render_tile_width; x++)
+                        _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset + x], x, y, FALSE);
+                    tilemap_offset -= tilemap->horz_tiles;
+                }
+
+                for(x = 0; x < render_tile_width; x++)
+                    _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset + x], x, 0, TRUE);
+            } else {
+                for(y = 1; y <= render_tile_height - 1; y++)
+                    memcpy(
+                        &screen_state->tile_index[(y - 1) * render_tile_width],
+                        &screen_state->tile_index[y * render_tile_width],
+                        sizeof(gfx_tile_state) * render_tile_width
+                    );
+
+                for(x = 0; x < render_tile_width; x++)
+                    _set_tile_for_screen_state(screen_state, tilemap_buffer[tilemap_offset + x], x, render_tile_height - 1, TRUE);
+            }
         }
 
         /* increment or decrement all tile indexes to be cleared */
-        for(i = 0; i < screen_state->tiles_to_clear_count; i++) {
-            screen_state->tiles_to_clear[i] += scroll_up ? render_tile_width * -1 : render_tile_width;
-            /* modulus to account for overflow */
-            screen_state->tiles_to_clear[i] %= screen_state->tile_count;
-        }
-    }
-}
-
-void _wrap_screen_offset(gfx_screen_state* screen_state) {
-    word i;
-    word row_size = (PAGE_WIDTH >> 2) * TILE_HEIGHT;
-    // if offset goes beyond the end of the page, then mark all tiles as dirty, then jump
-    // back up to the top of the page
-    if(screen_state->current_render_page_offset - screen_state->initial_render_page_offset >= row_size) {
-        // screen_state->current_render_page_offset -= row_size;
-        screen_state->current_render_page_offset = screen_state->initial_render_page_offset;
-        screen_state->tiles_to_update_count = screen_state->tile_count;
-        for(i = 0; i < screen_state->tile_count; i++) {
-            screen_state->tiles_to_update[i] = i;
+        if (!bottom_of_page) {
+            for(i = 0; i < screen_state->tiles_to_clear_count; i++) {
+                screen_state->tiles_to_clear[i] += scroll_up ? render_tile_width * -1 : render_tile_width;
+                /* modulus to account for overflow */
+                screen_state->tiles_to_clear[i] %= screen_state->tile_count;
+            }
         }
     }
 }
@@ -606,8 +623,6 @@ void gfx_set_scroll_offset(word x_offset, word y_offset) {
     if(horz_tile_offset != 0 || vert_tile_offset != 0) {
         _scroll_screen_tiles(screen_state_page_0, screen_tilemap, horz_tile_offset, vert_tile_offset);
         _scroll_screen_tiles(screen_state_page_1, screen_tilemap, horz_tile_offset, vert_tile_offset);
-        _wrap_screen_offset(screen_state_page_0);
-        _wrap_screen_offset(screen_state_page_1);
         screen_tilemap->horz_offset += horz_tile_offset;
         screen_tilemap->vert_offset += vert_tile_offset;
     }
