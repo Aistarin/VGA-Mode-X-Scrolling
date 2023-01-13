@@ -262,20 +262,26 @@ void _gfx_draw_linear_bitmap_to_planar_bitmap(
 }
 
 void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
-    word tile_x = dest_x / TILE_WIDTH;
-    word tile_y = dest_y / TILE_HEIGHT;
-    word tile_max_x = ((dest_x + width - 1) / TILE_WIDTH);
-    word tile_max_y = ((dest_y + height - 1) / TILE_HEIGHT);
-    _set_tile_states(
-        screen_state_current,
-        GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE,
-        FALSE,
-        tile_x,
-        tile_y,
-        tile_max_x,
-        tile_max_y
-    );
     _gfx_add_sprite_to_draw(screen_state_current, bitmap, dest_x, dest_y, width, height);
+}
+
+void gfx_set_tile_states_for_sprites(){
+    word i;
+    gfx_sprite_to_draw *cur_sprite;
+
+    for(i = 0; i < sprites_to_draw_count; i++) {
+
+        cur_sprite = &sprites_to_draw[i];
+        _set_tile_states(
+            screen_state_current,
+            GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE,
+            FALSE,
+            cur_sprite->dest_x / TILE_WIDTH,
+            cur_sprite->dest_y / TILE_HEIGHT,
+            (cur_sprite->dest_x + cur_sprite->width - 1) / TILE_WIDTH,
+            (cur_sprite->dest_y + cur_sprite->height - 1) / TILE_HEIGHT
+        );
+    }
 }
 
 void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte x, byte y, bool force) {
@@ -555,11 +561,6 @@ void gfx_render_all() {
 
     vga_wait_for_retrace();
 
-    /* clear tiles that have had sprites rendered to them previously */
-    if (screen_state_current->tiles_to_clear_count > 0)
-        _gfx_blit_dirty_tiles(TRUE);
-        screen_state_current->tiles_to_clear_count = 0;
-
     /* queue all of the dirty tiles in the main memory buffer */
     for(i = 0; i < render_tile_count; i++) {
         current_tile_state = screen_state_current->tile_index[i].state;
@@ -580,11 +581,16 @@ void gfx_render_all() {
         }
     }
 
+    /* clear tiles that have had sprites rendered to them previously */
+    if (screen_state_current->tiles_to_clear_count > 0)
+        _gfx_blit_dirty_tiles(TRUE);
+
     if (screen_state_current->tiles_to_update_count > 0)
         _gfx_blit_dirty_tiles(FALSE);
 
     if(sprites_to_draw_count > 0)
         gfx_blit_sprites();
+        gfx_set_tile_states_for_sprites();
 
     /* page flip + scrolling */
     vga_offset_x = ((view_scroll_x % TILE_WIDTH) >> 2);
@@ -593,6 +599,7 @@ void gfx_render_all() {
     vga_set_horizontal_pan((byte) view_scroll_x);
 
     /* clear buffers once rendering has finished */
+    screen_state_current->tiles_to_clear_count = 0;
     screen_state_current->tiles_to_update_count = 0;
     sprites_to_draw_count = 0;
 
