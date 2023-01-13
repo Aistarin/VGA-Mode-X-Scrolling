@@ -187,24 +187,21 @@ int test_scroll(int testobj_max){
             if(ch == 27)
                 break;
             else if(ch == 119)  // w
-                pos_y -= TILE_HEIGHT / 4;
+                pos_y -= TILE_HEIGHT;
             else if(ch == 115)  // s
-                pos_y += TILE_HEIGHT / 4;
+                pos_y += TILE_HEIGHT;
             else if(ch == 97)   // a
-                pos_x -= TILE_WIDTH / 4;
+                pos_x -= TILE_WIDTH;
             else if(ch == 100)  // d
-                pos_x += TILE_WIDTH / 4;
+                pos_x += TILE_WIDTH;
         }
         if(pos_y < 0)
             pos_y = 0;
         if(pos_x < 0)
             pos_x = 0;
-        /* scroll screen before drawing sprites */
-        gfx_set_scroll_offset(pos_x, pos_y);
+
         for(j = 0; j < testobj_count; j++) {
             cur_testobj = &testobj_list[j];
-            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height);
-
             cur_testobj->xpos += cur_testobj->hspeed;
             cur_testobj->ypos += cur_testobj->vspeed;
             if(cur_testobj->xpos > (320 - sprite_buffer->width) || cur_testobj->xpos < 0) {
@@ -225,6 +222,12 @@ int test_scroll(int testobj_max){
             cur_testobj->ypos = rand() % (240 - sprite_buffer->height);
             cur_testobj->hspeed = 1 + rand() % 5;
             cur_testobj->vspeed = 1 + rand() % 5;
+        }
+        /* scroll screen before drawing sprites */
+        gfx_set_scroll_offset(pos_x, pos_y);
+        for(j = 0; j < testobj_count; j++) {
+            cur_testobj = &testobj_list[j];
+            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height);
         }
         gfx_render_all();
     }
