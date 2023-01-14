@@ -187,14 +187,37 @@ int test_scroll(int testobj_max){
             if(ch == 27)
                 break;
             else if(ch == 119)  // w
-                pos_y -= TILE_HEIGHT;
+                pos_y -= 1;
             else if(ch == 115)  // s
-                pos_y += TILE_HEIGHT;
+                pos_y += 1;
             else if(ch == 97)   // a
-                pos_x -= TILE_WIDTH;
+                pos_x -= 1;
             else if(ch == 100)  // d
+                pos_x += 1;
+            else if(ch == 113) { // q
+                pos_x -= 1;
+                pos_y -= 1;
+            } else if(ch == 101) { // E
+                pos_x += 1;
+                pos_y += 1;
+            }
+            else if(ch == 87)  // W
+                pos_y -= TILE_HEIGHT;
+            else if(ch == 83)  // S
+                pos_y += TILE_HEIGHT;
+            else if(ch == 65)   // A
+                pos_x -= TILE_WIDTH;
+            else if(ch == 68)  // D
                 pos_x += TILE_WIDTH;
+            else if(ch == 81) { // Q
+                pos_x -= TILE_WIDTH;
+                pos_y -= TILE_HEIGHT;
+            } else if(ch == 69) { // E
+                pos_x += TILE_WIDTH;
+                pos_y += TILE_HEIGHT;
+            }
         }
+
         if(pos_y < 0)
             pos_y = 0;
         if(pos_x < 0)
