@@ -148,9 +148,9 @@ int test_scroll(int testobj_max){
     gfx_init_video();
 
     tileset_buffer = gfx_get_tileset_buffer();
-    // render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
-    load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
-    vga_set_palette(palette, 0, 255);
+    render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+    // load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
+    // vga_set_palette(palette, 0, 255);
     gfx_load_tileset();
 
     tilemap_buffer = gfx_get_tilemap_buffer();

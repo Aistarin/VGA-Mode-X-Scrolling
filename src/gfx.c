@@ -51,7 +51,7 @@ struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
     struct gfx_screen_state* screen_state;
     word tile_count = (word) horz_tiles * (word) vert_tiles;
     dword bytes_to_allocate = sizeof(struct gfx_screen_state)
-        + sizeof(gfx_tile_state) * tile_count               // memory for tile index
+        + sizeof(struct gfx_tile_state) * tile_count        // memory for tile index
         + sizeof(word) * tile_count                         // memory for tile to clear
         + sizeof(word) * tile_count;                        // memory for tiles to update
 
@@ -64,10 +64,10 @@ struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
     screen_state->tiles_to_update_count = 0;
 
     /* set pointers to contiguous memory locations */
-    screen_state->tile_index = (gfx_tile_state *) (screen_state + sizeof(struct gfx_screen_state));
+    screen_state->tile_index = (gfx_tile_state *) ((byte *) screen_state + sizeof(struct gfx_screen_state));
     memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
-    screen_state->tiles_to_clear = (word *) (screen_state->tile_index + sizeof(word) * tile_count);
-    screen_state->tiles_to_update = (word *) (screen_state->tiles_to_clear + sizeof(word) * tile_count);
+    screen_state->tiles_to_clear = (word *) ((byte *) screen_state->tile_index + sizeof(gfx_tile_state) * tile_count);
+    screen_state->tiles_to_update = (word *) ((byte *) screen_state->tiles_to_clear + sizeof(word) * tile_count);
 
     return screen_state;
 }
@@ -75,7 +75,8 @@ struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
 struct gfx_tilemap* _init_tilemap(byte horz_tiles, byte vert_tiles) {
     struct gfx_tilemap* tilemap;
     word tile_count = (word) horz_tiles * (word) vert_tiles;
-    dword bytes_to_allocate = sizeof(struct gfx_tilemap) + (sizeof(byte) * tile_count);
+    dword bytes_to_allocate = sizeof(struct gfx_tilemap)
+        + sizeof(byte) * tile_count;                        // memory for tilemap buffer
 
     tilemap = (gfx_tilemap *) malloc(bytes_to_allocate);
 
@@ -87,8 +88,7 @@ struct gfx_tilemap* _init_tilemap(byte horz_tiles, byte vert_tiles) {
 
     /* bitmap buffer is memory immediately after main struct */
     tilemap->buffer = (byte *) tilemap + sizeof(struct gfx_tilemap);
-
-    memset(tilemap->buffer, 0, tile_count);
+    memset(tilemap->buffer, 0, sizeof(byte) * tile_count);
 
     return tilemap;
 }
