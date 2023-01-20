@@ -52,11 +52,7 @@ typedef struct gfx_screen_state {
     word tile_count;                        // number of tiles total
     byte horz_tiles;                        // number of horizontal tiles
     byte vert_tiles;                        // number of vertical tiles
-    word tiles_to_clear_count;              // number of tiles to clear before drawing sprites
-    word tiles_to_update_count;             // number of tiles to update
     gfx_tile_state *tile_index;             // main tile index
-    word *tiles_to_clear;                   // list of tiles to clear
-    word *tiles_to_update;                  // list of tiles to update
 } gfx_screen_state;
 
 typedef struct gfx_tilemap {
