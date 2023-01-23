@@ -97,5 +97,6 @@ void gfx_set_scroll_offset(word x_offset, word y_offset);
 gfx_tilemap* gfx_get_tilemap_buffer();
 
 extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte sprite_height);
+extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
 
 #endif
