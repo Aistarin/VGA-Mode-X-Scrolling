@@ -76,9 +76,8 @@ void fskip(FILE *fp, int num_bytes)
 void load_bmp_to_buffer(char *file, byte *screen_buffer, word buffer_width, word buffer_height, byte *palette)
 {
     FILE *fp;
-    long index;
+    dword index, x;
     word num_colors, width, height;
-    int x;
 
     /* open the file */
     if ((fp = fopen(file,"rb")) == NULL)
@@ -117,16 +116,16 @@ void load_bmp_to_buffer(char *file, byte *screen_buffer, word buffer_width, word
         x=fgetc(fp);
     }
 
-    for(index = (long) buffer_height; index > 0; index--) {
-        for(x = 0; x < (int) buffer_width; x++) {
-            screen_buffer[buffer_width * index + x] = (byte)fgetc(fp);
+    for(index = 0; index < buffer_height; index++) {
+        for(x = 0; x < buffer_width; x++) {
+            screen_buffer[(dword) buffer_width * ((dword) buffer_height - index - 1) + x] = (byte)fgetc(fp);
         }
     }
 
     fclose(fp);
 }
 
-int test_scroll(int testobj_max){
+int test_scroll(int testobj_max, bool jodi){
     int i, j, k, offset, x, y, tile_offset_x = 0, tile_offset_y = 0, pos_x = 0, pos_y = 0;
     gfx_buffer *tileset_buffer;
     gfx_buffer *sprite_buffer;
@@ -139,18 +138,24 @@ int test_scroll(int testobj_max){
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
 
-    test_buffer = gfx_create_empty_buffer(0, TILE_WIDTH, TILE_HEIGHT, FALSE);
+    test_buffer = gfx_create_empty_buffer(0, 64, 32, FALSE);
 
     sprite_buffer = gfx_create_empty_buffer(0, test_buffer->width, test_buffer->height, TRUE);
-    render_pattern_to_buffer_2(test_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
+    // render_pattern_to_buffer_2(test_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
+    load_bmp_to_buffer("dvd-logo.bmp", test_buffer->buffer, test_buffer->width, test_buffer->height, palette);
+
     gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, test_buffer->width, test_buffer->height);
 
     gfx_init_video();
 
     tileset_buffer = gfx_get_tileset_buffer();
-    render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
-    // load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
-    // vga_set_palette(palette, 0, 255);
+    if(jodi) {
+        load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
+        vga_set_palette(palette, 0, 255);
+    } else {
+        render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+    }
+
     gfx_load_tileset();
 
     tilemap_buffer = gfx_get_tilemap_buffer();
@@ -264,10 +269,12 @@ int test_scroll(int testobj_max){
 
 int main(int argc, char *argv[]) {
     char *a = argv[1];
+    char *b = argv[2];
     int num = atoi(a);
+    int jodi = atoi(b);
 
     if(argc >= 2)
-        return test_scroll(num);
+        return test_scroll(num, jodi);
     else
-        return test_scroll(256);
+        return test_scroll(256, FALSE);
 }

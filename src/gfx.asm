@@ -30,15 +30,27 @@ _gfx_blit_sprite: FUNCTION
     outerLoop:
         mov cl, dl                      ;; set low counter byte to sprite height
         mov edi, ebx                    ;; load initial vga offset
-    innerLoop:
+    loadFirstPixel:
         lodsb                           ;; load pixel that sprite_offset points to into al
+        test al, al
+        jnz storeFirstPixel
+        inc edi
+        jmp loadSecondPixel
+    storeFirstPixel:
         stosb                           ;; save pixel loaded into al to vga offset
+    loadSecondPixel:
         add edi, PAGE_WIDTH - 1         ;; move down one pixel by adding a row of pixels
         lodsb                           ;; load pixel that sprite_offset points to into al
+        test al, al
+        jnz storeSecondPixel
+        inc edi
+        jmp innerLoopEnd
+    storeSecondPixel:
         stosb                           ;; save pixel loaded into al to vga offset
+    innerLoopEnd:
         add edi, PAGE_WIDTH - 1         ;; move down one pixel by adding a row of pixels
         sub cl, 2
-        jnz innerLoop
+        jnz loadFirstPixel
     innerLoopDone:
         inc ebx                         ;; move initial vga offset to next row
         dec ch
