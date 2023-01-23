@@ -473,9 +473,9 @@ void _gfx_blit_dirty_tiles() {
     outpw(GC_INDEX + 1, 0x0ff);
 }
 
-void gfx_blit_sprites() {
+void gfx_blit_sprites_old() {
     byte plane, x_offset;
-    dword i, x, y, sprite_width, sprite_height, sprite_offset, dest_x, dest_y, vga_offset;
+    dword i, x, y, sprite_width, sprite_height, sprite_offset, dest_x, dest_y, initial_vga_offset, vga_offset;
     dword initial_offset = screen_state_current->current_render_page_offset;
     byte *sprite_buffer;
     byte *VGA = (byte *) 0xA0000;
@@ -501,13 +501,50 @@ void gfx_blit_sprites() {
             dest_x = (cur_sprite->dest_x + x_offset) >> 2;
             dest_y = cur_sprite->dest_y;
 
+            initial_vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + initial_offset;
+            vga_offset = initial_vga_offset;
             for(x = 0; x < sprite_width; x++) {
-                vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + x + initial_offset;
+                vga_offset = initial_vga_offset++;
                 for(y = 0; y < sprite_height; y++) {
                     VGA[vga_offset] = sprite_buffer[sprite_offset++];
                     vga_offset += PAGE_WIDTH >> 2;
                 }
             }
+        }
+    }
+}
+
+void gfx_blit_sprites() {
+    byte plane, x_offset;
+    dword i, x, y, sprite_width, sprite_height, sprite_offset, dest_x, dest_y, initial_vga_offset, vga_offset;
+    dword initial_offset = screen_state_current->current_render_page_offset;
+    byte *sprite_buffer;
+    byte *VGA = (byte *) 0xA0000;
+    gfx_sprite_to_draw *cur_sprite;
+
+    for(plane = 0; plane < 4; plane++) {
+        // select one plane at a time
+        outp(SC_INDEX, MAP_MASK);
+        outp(SC_DATA, 1 << plane);
+
+        for(i = 0; i < sprites_to_draw_count; i++) {
+            cur_sprite = &sprites_to_draw[i];
+            sprite_width = cur_sprite->width >> 2;
+            sprite_height = cur_sprite->height;
+            sprite_buffer = cur_sprite->sprite_buffer->buffer;
+
+            x_offset = plane - (cur_sprite->dest_x % 4);
+            /* modulus again to account for overflow, can't do it on same line as above for some reason,
+               it's likely getting optimized out (at least on Watcom) */
+            x_offset = x_offset % 4;
+            sprite_offset = (cur_sprite->sprite_buffer->buffer_size >> 2) * (dword) x_offset;
+    
+            dest_x = (cur_sprite->dest_x + x_offset) >> 2;
+            dest_y = cur_sprite->dest_y;
+
+            initial_vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + initial_offset;
+
+            gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);
         }
     }
 }
