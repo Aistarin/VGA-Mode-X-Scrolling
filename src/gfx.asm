@@ -18,6 +18,7 @@ GLOBAL _gfx_blit_sprite
 _gfx_blit_sprite: FUNCTION
     %arg initial_vga_offset:dword, sprite_offset:dword, sprite_width:byte, sprite_height:byte
     pusha
+    cld
 
     mov ebx, dword [initial_vga_offset] ;; set initial vga offset aside
 
@@ -63,171 +64,110 @@ GLOBAL _gfx_blit_16_x_16_tile
 _gfx_blit_16_x_16_tile: FUNCTION
     %arg vga_offset:dword, tile_offset:dword
     pusha
+    cld
 
-    mov edi, dword [vga_offset]         ;; set initial vga offset aside
+    mov edi, dword [vga_offset]         ;; set destination to where tile will be drawn in VRAM
+    mov esi, dword [tile_offset]        ;; set source to where tile is located in VRAM
 
-    mov esi, dword [tile_offset]        ;; source set to sprite buffer
-
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    lodsb
-    stosb
-    ;; add edi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
-    ;; add esi, PAGE_WIDTH - 4         ;; move down one pixel by adding a row of pixels
+    ;; unrolled loop where we latch copy 4 pixels for each movsb (16 in total), incrementing
+    ;; esi and edi by the page width to go down into the next row
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 4
+    add esi, PAGE_WIDTH - 4
+    movsb
+    movsb
+    movsb
+    movsb
+    ;; no need to update source and destination after the final iteration
+    ;; add edi, PAGE_WIDTH - 4
+    ;; add esi, PAGE_WIDTH - 4
 
     popa
 ENDFUNCTION

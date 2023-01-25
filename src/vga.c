@@ -66,7 +66,7 @@ void vga_set_palette(byte *palette, byte start_index, byte end_index) {
 
     outp(PALETTE_INDEX,0);
 
-    for(i = 0; i < 256*3; i++) {
+    for(i = start_index; i < end_index*3; i++) {
         outp(PALETTE_DATA, palette[i]);
     }
 }
