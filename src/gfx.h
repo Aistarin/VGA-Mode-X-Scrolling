@@ -36,8 +36,10 @@ typedef struct gfx_buffer {
     int color_depth;                        // color depth of image
     dword buffer_size;                      // total size of buffer (in bytes)
     bool is_planar;                         // flag to determine whether or not buffer is stored in planar format
+    bool is_compiled;                       // flag to determine whether or not buffer contains compiled sprite data
     word width;                             // buffer width (in pixels)
     word height;                            // buffer height (in pixels)
+    dword plane_offsets[4];                 // plane offsets
     byte *buffer;                           // array of bytes that holds raw bitmap data
 } gfx_buffer;
 
@@ -81,7 +83,7 @@ typedef struct gfx_tilemap {
 } gfx_tilemap;
 
 void gfx_init_video();
-struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar);
+struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar, dword compiled_size);
 void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
 gfx_buffer* gfx_get_screen_buffer();
 gfx_buffer* gfx_get_tileset_buffer();
@@ -98,5 +100,6 @@ gfx_tilemap* gfx_get_tilemap_buffer();
 
 extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte sprite_height);
 extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
+extern void gfx_blit_compiled_planar_sprite(byte *vga_offset, byte *sprite_offset);
 
 #endif

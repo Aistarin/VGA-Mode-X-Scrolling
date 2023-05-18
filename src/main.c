@@ -1,5 +1,6 @@
 #include "vga.h"
 #include "gfx.h"
+#include "spr.h"
 #include "common.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -134,19 +135,26 @@ int test_scroll(int testobj_max, bool jodi){
     byte palette[256*3];
     char ch;
     int testobj_count = 0;
+    dword compiled_sized = 0;
 
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
 
-    test_buffer = gfx_create_empty_buffer(0, 64, 32, FALSE);
-
-    sprite_buffer = gfx_create_empty_buffer(0, test_buffer->width, test_buffer->height, TRUE);
-    // render_pattern_to_buffer_2(test_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
+    test_buffer = gfx_create_empty_buffer(0, 64, 32, FALSE, 0);
     load_bmp_to_buffer("dvd-logo.bmp", test_buffer->buffer, test_buffer->width, test_buffer->height, palette);
+    compiled_sized = spr_compile_planar_sprite(test_buffer->buffer, test_buffer->width, test_buffer->height, NULL, NULL);
 
-    gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, test_buffer->width, test_buffer->height);
+    sprite_buffer = gfx_create_empty_buffer(0, test_buffer->width, test_buffer->height, TRUE, compiled_sized);
+    spr_compile_planar_sprite(test_buffer->buffer, test_buffer->width, test_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
+
+    // gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
     gfx_init_video();
+
+    palette[0] = 0;
+    palette[1] = 0;
+    palette[2] = 0;
+    vga_set_palette(palette, 0, 15);
 
     tileset_buffer = gfx_get_tileset_buffer();
     if(jodi) {

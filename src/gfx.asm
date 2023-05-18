@@ -171,3 +171,16 @@ _gfx_blit_16_x_16_tile: FUNCTION
 
     popa
 ENDFUNCTION
+
+GLOBAL _gfx_blit_compiled_planar_sprite
+_gfx_blit_compiled_planar_sprite: FUNCTION
+    %arg vga_offset:dword, sprite_offset:dword
+    pusha
+    cld
+
+    mov edi, dword [vga_offset]         ;; set destination to where sprite will be drawn in VRAM
+
+    call dword [sprite_offset]
+
+    popa
+ENDFUNCTION

@@ -3,6 +3,8 @@
         "stdio.h": "c",
         "cmath": "c",
         "cstddef": "c",
-        "cstdint": "cpp"
+        "cstdint": "cpp",
+        "vga.h": "c",
+        "spr.h": "c"
     }
 }

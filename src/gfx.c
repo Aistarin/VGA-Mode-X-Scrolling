@@ -28,14 +28,15 @@ gfx_tilemap *screen_tilemap;            // pointer to tilemap
 
 int frame_number = 0;
 
-struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar) {
+struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar, dword compiled_size) {
     struct gfx_buffer* empty_buffer;
-    int buffer_size = (int) width * (int) height;
+    dword buffer_size = compiled_size ? (dword) compiled_size : (dword) width * (dword) height;
 
     empty_buffer = malloc(sizeof(struct gfx_buffer) + (sizeof(byte) * buffer_size));
 
     empty_buffer->buffer_size = buffer_size;
     empty_buffer->is_planar = is_planar;
+    empty_buffer->is_compiled = compiled_size ? TRUE : FALSE;
     empty_buffer->width = width;
     empty_buffer->height = height;
 
@@ -370,7 +371,7 @@ void gfx_init_video() {
     // gfx_screen_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, render_page_width, render_page_height, TRUE);
 
     /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
-    gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE);
+    gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE, 0);
 
     /* render tile area should encompass the size of the viewport + 1 tile*/
     render_tile_width = render_page_width / TILE_WIDTH;
@@ -481,6 +482,9 @@ void gfx_blit_sprites() {
     byte *sprite_buffer;
     byte *VGA = (byte *) 0xA0000;
     gfx_sprite_to_draw *cur_sprite;
+    dword plane_inits[] = {0x03020100, 0x00030201, 0x01000302, 0x02010003};
+    bool is_compiled;
+    dword *plane_offsets;
 
     for(plane = 0; plane < 4; plane++) {
         // select one plane at a time
@@ -492,26 +496,25 @@ void gfx_blit_sprites() {
             sprite_width = cur_sprite->width >> 2;
             sprite_height = cur_sprite->height;
             sprite_buffer = cur_sprite->sprite_buffer->buffer;
+            is_compiled = cur_sprite->sprite_buffer->is_compiled;
+            plane_offsets = cur_sprite->sprite_buffer->plane_offsets;
 
             x_offset = plane - (cur_sprite->dest_x % 4);
             /* modulus again to account for overflow, can't do it on same line as above for some reason,
                it's likely getting optimized out (at least on Watcom) */
             x_offset = x_offset % 4;
-            sprite_offset = (cur_sprite->sprite_buffer->buffer_size >> 2) * (dword) x_offset;
-    
+
             dest_x = (cur_sprite->dest_x + x_offset) >> 2;
             dest_y = cur_sprite->dest_y;
 
             initial_vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + initial_offset;
-            // vga_offset = initial_vga_offset;
-            // for(x = 0; x < sprite_width; x++) {
-            //     vga_offset = initial_vga_offset++;
-            //     for(y = 0; y < sprite_height; y++) {
-            //         VGA[vga_offset] = sprite_buffer[sprite_offset++];
-            //         vga_offset += PAGE_WIDTH >> 2;
-            //     }
-            // }
-            gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);
+            if(is_compiled){
+                sprite_offset = plane_offsets[x_offset];
+                gfx_blit_compiled_planar_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset]);
+            } else {
+                sprite_offset = (cur_sprite->sprite_buffer->buffer_size >> 2) * (dword) x_offset;
+                gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);
+            }
         }
     }
 }
