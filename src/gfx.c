@@ -545,7 +545,7 @@ void _scroll_screen_tiles(gfx_screen_state* screen_state, gfx_tilemap* tilemap, 
             if(horz_tile_offset < 0) {
                 /* TODO: handle case where offset goes beyond the limit */
                 /* shift all tiles to the right */
-                for(x = render_tile_width - abs_horz_tile_offset; x > 0; x--) {
+                for(x = render_tile_width - 1; x > (abs_horz_tile_offset - 1); x--) {
                     screen_state->tile_index[tile_index_offset + x] = screen_state->tile_index[tile_index_offset + x - abs_horz_tile_offset];
                 }
                 /* populate incoming tiles on the left */
