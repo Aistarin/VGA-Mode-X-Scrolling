@@ -5,6 +5,7 @@
         "cstddef": "c",
         "cstdint": "cpp",
         "vga.h": "c",
-        "spr.h": "c"
+        "spr.h": "c",
+        "gfx.h": "c"
     }
 }

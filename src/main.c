@@ -1,6 +1,7 @@
 #include "vga.h"
 #include "gfx.h"
 #include "spr.h"
+#include "timer.h"
 #include "common.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -136,9 +137,12 @@ int test_scroll(int testobj_max, bool jodi){
     char ch;
     int testobj_count = 0;
     dword compiled_sized = 0;
+    bool exit_program = FALSE;
 
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
+
+    timer_init();
 
     test_buffer = gfx_create_empty_buffer(0, 64, 32, FALSE, 0);
     load_bmp_to_buffer("dvd-logo.bmp", test_buffer->buffer, test_buffer->width, test_buffer->height, palette);
@@ -194,71 +198,78 @@ int test_scroll(int testobj_max, bool jodi){
     tile_offset_x = 0;
     tile_offset_y = 0;
     i = 0;
+    timer_set_interval(16);
     while (1) {
-        if(kbhit()) {
-            ch = getch();
-            if(ch == 27)
-                break;
-            else if(ch == 119)  // w
-                pos_y -= 1;
-            else if(ch == 115)  // s
-                pos_y += 1;
-            else if(ch == 97)   // a
-                pos_x -= 1;
-            else if(ch == 100)  // d
-                pos_x += 1;
-            else if(ch == 113) { // q
-                pos_x -= 1;
-                pos_y -= 1;
-            } else if(ch == 101) { // E
-                pos_x += 1;
-                pos_y += 1;
+        timer_start();
+
+        while(timer_step()) {
+
+            if(kbhit()) {
+                ch = getch();
+                if(ch == 27)
+                    exit_program = TRUE;
+                else if(ch == 119)  // w
+                    pos_y -= 1;
+                else if(ch == 115)  // s
+                    pos_y += 1;
+                else if(ch == 97)   // a
+                    pos_x -= 1;
+                else if(ch == 100)  // d
+                    pos_x += 1;
+                else if(ch == 113) { // q
+                    pos_x -= 1;
+                    pos_y -= 1;
+                } else if(ch == 101) { // E
+                    pos_x += 1;
+                    pos_y += 1;
+                }
+                else if(ch == 87)  // W
+                    pos_y -= TILE_HEIGHT * 2;
+                else if(ch == 83)  // S
+                    pos_y += TILE_HEIGHT * 2;
+                else if(ch == 65)   // A
+                    pos_x -= TILE_WIDTH * 2;
+                else if(ch == 68)  // D
+                    pos_x += TILE_WIDTH * 2;
+                else if(ch == 81) { // Q
+                    pos_x -= TILE_WIDTH * 2;
+                    pos_y -= TILE_HEIGHT * 2;
+                } else if(ch == 69) { // E
+                    pos_x += TILE_WIDTH * 2;
+                    pos_y += TILE_HEIGHT * 2;
+                }
             }
-            else if(ch == 87)  // W
-                pos_y -= TILE_HEIGHT;
-            else if(ch == 83)  // S
-                pos_y += TILE_HEIGHT;
-            else if(ch == 65)   // A
-                pos_x -= TILE_WIDTH;
-            else if(ch == 68)  // D
-                pos_x += TILE_WIDTH;
-            else if(ch == 81) { // Q
-                pos_x -= TILE_WIDTH;
-                pos_y -= TILE_HEIGHT;
-            } else if(ch == 69) { // E
-                pos_x += TILE_WIDTH;
-                pos_y += TILE_HEIGHT;
+
+            if(pos_y < 0)
+                pos_y = 0;
+            if(pos_x < 0)
+                pos_x = 0;
+
+            for(j = 0; j < testobj_count; j++) {
+                cur_testobj = &testobj_list[j];
+                cur_testobj->xpos += cur_testobj->hspeed;
+                cur_testobj->ypos += cur_testobj->vspeed;
+                if(cur_testobj->xpos > (320 - sprite_buffer->width) || cur_testobj->xpos < 0) {
+                    if(cur_testobj->xpos > (320 - sprite_buffer->width)) cur_testobj->xpos = (320 - sprite_buffer->width);
+                    else if(cur_testobj->xpos < 0) cur_testobj->xpos = 0;
+                    cur_testobj->hspeed = -(cur_testobj->hspeed);
+                }
+
+                if(cur_testobj->ypos > (240 - sprite_buffer->height) || cur_testobj->ypos < 0) {
+                    if(cur_testobj->ypos > (240 - sprite_buffer->height)) cur_testobj->ypos = (240 - sprite_buffer->height);
+                    else if(cur_testobj->ypos < 0) cur_testobj->ypos = 0;
+                    cur_testobj->vspeed = -(cur_testobj->vspeed);
+                }
+            }
+            if(k++ % 30 == 0 && testobj_count < testobj_max){
+                cur_testobj = &testobj_list[testobj_count++];
+                cur_testobj->xpos = rand() % (320 - sprite_buffer->width);
+                cur_testobj->ypos = rand() % (240 - sprite_buffer->height);
+                cur_testobj->hspeed = 1 + rand() % 5;
+                cur_testobj->vspeed = 1 + rand() % 5;
             }
         }
 
-        if(pos_y < 0)
-            pos_y = 0;
-        if(pos_x < 0)
-            pos_x = 0;
-
-        for(j = 0; j < testobj_count; j++) {
-            cur_testobj = &testobj_list[j];
-            cur_testobj->xpos += cur_testobj->hspeed;
-            cur_testobj->ypos += cur_testobj->vspeed;
-            if(cur_testobj->xpos > (320 - sprite_buffer->width) || cur_testobj->xpos < 0) {
-                if(cur_testobj->xpos > (320 - sprite_buffer->width)) cur_testobj->xpos = (320 - sprite_buffer->width);
-                else if(cur_testobj->xpos < 0) cur_testobj->xpos = 0;
-                cur_testobj->hspeed = -(cur_testobj->hspeed);
-            }
-
-            if(cur_testobj->ypos > (240 - sprite_buffer->height) || cur_testobj->ypos < 0) {
-                if(cur_testobj->ypos > (240 - sprite_buffer->height)) cur_testobj->ypos = (240 - sprite_buffer->height);
-                else if(cur_testobj->ypos < 0) cur_testobj->ypos = 0;
-                cur_testobj->vspeed = -(cur_testobj->vspeed);
-            }
-        }
-        if(k++ % 30 == 0 && testobj_count < testobj_max){
-            cur_testobj = &testobj_list[testobj_count++];
-            cur_testobj->xpos = rand() % (320 - sprite_buffer->width);
-            cur_testobj->ypos = rand() % (240 - sprite_buffer->height);
-            cur_testobj->hspeed = 1 + rand() % 5;
-            cur_testobj->vspeed = 1 + rand() % 5;
-        }
         /* scroll screen before drawing sprites */
         gfx_set_scroll_offset(pos_x, pos_y);
         for(j = 0; j < testobj_count; j++) {
@@ -266,9 +277,16 @@ int test_scroll(int testobj_max, bool jodi){
             gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height);
         }
         gfx_render_all();
+
+        timer_end();
+
+        if(exit_program) {
+            break;
+        }
     }
 
     vga_exit_modex();
+    timer_shutdown();
 
     printf("total objects rendered: %d\n", testobj_count);
 

@@ -9,6 +9,7 @@ WCL386 src\main.c -c -fo=obj\main.obj
 WCL386 src\vga.c -c -fo=obj\vga.obj
 WCL386 src\gfx.c -c -fo=obj\gfx.obj
 WCL386 src\spr.c -c -fo=obj\spr.obj
+WCL386 src\timer.c -c -fo=obj\timer.obj
 
 
 IF EXIST *.ERR GOTO CompilerError
