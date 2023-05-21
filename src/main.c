@@ -274,7 +274,7 @@ int test_scroll(int testobj_max, bool jodi){
         gfx_set_scroll_offset(pos_x, pos_y);
         for(j = 0; j < testobj_count; j++) {
             cur_testobj = &testobj_list[j];
-            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height);
+            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height, cur_testobj->hspeed > 0 ? TRUE : FALSE);
         }
         gfx_render_all();
 

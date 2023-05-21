@@ -31,7 +31,7 @@ dword spr_compile_planar_sprite(byte *sprite_buffer, word width, word height, by
         }
         // output_pos += 17;
         for(x = plane; x < width; x += 4) {
-            offset = x >> 2; // divide by 4
+            offset = 0;
             for(y = 0; y < height; y++) {
                 pixel = sprite_buffer[y * width + x];
                 if(pixel != 0) {
@@ -49,6 +49,13 @@ dword spr_compile_planar_sprite(byte *sprite_buffer, word width, word height, by
                     }
                 }
                 offset += PAGE_WIDTH >> 2;  // divide by 4
+            }
+            if(!calculate_only) {
+                output_buffer[output_pos++] = 0x01;
+                output_buffer[output_pos++] = 0xDF;
+                // printf("add edi, ebx\n");
+            } else {
+                output_pos += 2;
             }
         }
         if(!calculate_only) {

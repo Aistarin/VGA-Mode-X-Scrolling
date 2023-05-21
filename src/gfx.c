@@ -103,7 +103,7 @@ void _set_tile_states(gfx_screen_state *screen_state, byte tile_state, bool clea
         };
 }
 
-void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_buffer, word dest_x, word dest_y, word width, word height) {
+void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_buffer, word dest_x, word dest_y, word width, word height, bool flip_horz) {
     gfx_sprite_to_draw *cur_sprite = &sprites_to_draw[sprites_to_draw_count++];
     word max_width = MIN(PAGE_WIDTH, dest_x + width) - dest_x;
     word max_height = MIN(PAGE_HEIGHT, dest_y + height) - dest_y;
@@ -113,6 +113,7 @@ void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_
     cur_sprite->dest_y = dest_y;
     cur_sprite->width = max_width;
     cur_sprite->height = max_height;
+    cur_sprite->flip_horz = flip_horz;
 }
 
 /**
@@ -257,8 +258,8 @@ void _gfx_draw_linear_bitmap_to_planar_bitmap(
     }
 }
 
-void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height) {
-    _gfx_add_sprite_to_draw(screen_state_current, bitmap, dest_x, dest_y, width, height);
+void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height, bool flip_horz) {
+    _gfx_add_sprite_to_draw(screen_state_current, bitmap, dest_x, dest_y, width, height, flip_horz);
 }
 
 void gfx_set_tile_states_for_sprites(){
@@ -477,7 +478,7 @@ void _gfx_blit_dirty_tiles() {
 
 void gfx_blit_sprites() {
     byte plane, x_offset;
-    dword i, x, y, sprite_width, sprite_height, sprite_offset, dest_x, dest_y, initial_vga_offset, vga_offset;
+    dword i, x, y, sprite_width, sprite_height, sprite_offset, dest_x, dest_y, initial_vga_offset, vga_offset, iter;
     dword initial_offset = screen_state_current->current_render_page_offset;
     byte *sprite_buffer;
     byte *VGA = (byte *) 0xA0000;
@@ -485,6 +486,7 @@ void gfx_blit_sprites() {
     dword plane_inits[] = {0x03020100, 0x00030201, 0x01000302, 0x02010003};
     bool is_compiled;
     dword *plane_offsets;
+    bool flip_horz;
 
     for(plane = 0; plane < 4; plane++) {
         // select one plane at a time
@@ -498,6 +500,8 @@ void gfx_blit_sprites() {
             sprite_buffer = cur_sprite->sprite_buffer->buffer;
             is_compiled = cur_sprite->sprite_buffer->is_compiled;
             plane_offsets = cur_sprite->sprite_buffer->plane_offsets;
+            flip_horz = cur_sprite->flip_horz;
+            iter = flip_horz ? 0xFFFFFFFF : 1;
 
             x_offset = plane - (cur_sprite->dest_x % 4);
             /* modulus again to account for overflow, can't do it on same line as above for some reason,
@@ -507,10 +511,13 @@ void gfx_blit_sprites() {
             dest_x = (cur_sprite->dest_x + x_offset) >> 2;
             dest_y = cur_sprite->dest_y;
 
-            initial_vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + initial_offset;
+            initial_vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + initial_offset + (flip_horz ? sprite_width - 1 : 0);
             if(is_compiled){
+                if(flip_horz) {
+                    x_offset = ~(x_offset) & 0x03;
+                }
                 sprite_offset = plane_offsets[x_offset];
-                gfx_blit_compiled_planar_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset]);
+                gfx_blit_compiled_planar_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], iter);
             } else {
                 sprite_offset = (cur_sprite->sprite_buffer->buffer_size >> 2) * (dword) x_offset;
                 gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);

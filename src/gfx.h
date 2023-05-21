@@ -56,6 +56,7 @@ typedef struct gfx_sprite_to_draw {
     word dest_y;                            // y destination coords of sprite
     word width;
     word height;
+    bool flip_horz;
 } gfx_sprite_to_draw;
 
 typedef struct gfx_tile_state {
@@ -92,7 +93,7 @@ void gfx_blit_screen_buffer();
 void gfx_mirror_page();
 void gfx_render_all();
 void gfx_load_tileset();
-void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height);
+void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height, bool flip_horz);
 void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 void gfx_load_linear_bitmap_to_planar_bitmap(byte *source_bitmap, byte *dest_bitmap, word width, word height);
 void gfx_set_scroll_offset(word x_offset, word y_offset);
@@ -100,6 +101,6 @@ gfx_tilemap* gfx_get_tilemap_buffer();
 
 extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte sprite_height);
 extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
-extern void gfx_blit_compiled_planar_sprite(byte *vga_offset, byte *sprite_offset);
+extern void gfx_blit_compiled_planar_sprite(byte *vga_offset, byte *sprite_offset, dword iter);
 
 #endif
