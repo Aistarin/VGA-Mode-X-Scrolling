@@ -6,16 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
-#include <dos.h>
-#include <math.h>
-#include <string.h>
-
-#ifndef M_PI
-#define M_PI 3.14159
-#endif
-
-unsigned int COSX[256];
-unsigned int SINEY[256];
 
 typedef struct testobj {
     int hspeed;
@@ -24,21 +14,12 @@ typedef struct testobj {
     int ypos;
 } testobj;
 
-void init_sin()
-{
-  int i;
-  for( i = 0;i < 256; ++i ) {
-    COSX[i] = SCREEN_WIDTH * (( cos(2.0*M_PI*i/256.0) + 1.0) / 2.0);
-    SINEY[i] = SCREEN_HEIGHT * (( sin(2.0*M_PI*i/256.0) + 1.0) / 2.0);
-  }
-}
-
 void render_pattern_to_buffer_1(byte *screen_buffer, word width, word height) {
     word i, j, color;
 
     for(j = 0; j < height; j++) {
         for(i = 0; i < width; i++) {
-            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x40 + (((40 * (i + j)) / (height + width)));
+            if (!(j % (TILE_HEIGHT >> 1) && i % (TILE_WIDTH >> 1))) color = 0x40 + (((40 * (i + j)) / (height + width)));
             else color = 0x10 + (((16 * (i + j)) / (height + width)));
             // else color = 0;
             screen_buffer[width * j + i] = color;
@@ -51,7 +32,7 @@ void render_pattern_to_buffer_2(byte *screen_buffer, word width, word height) {
 
     for(j = 0; j < height; j++) {
         for(i = 0; i < width; i++) {
-            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x10 + (((16 * (i + j)) / (height + width)));
+            if (!(j % (TILE_HEIGHT >> 1) && i % (TILE_WIDTH >> 1))) color = 0x10 + (((16 * (i + j)) / (height + width)));
             else color = 0x40 + (((40 * (i + j)) / (height + width)));
             // else color = 0;
             screen_buffer[width * j + i] = color;
@@ -127,7 +108,7 @@ void load_bmp_to_buffer(char *file, byte *screen_buffer, word buffer_width, word
     fclose(fp);
 }
 
-int test_scroll(int testobj_max, bool jodi){
+int test_scroll(int testobj_max, byte test_mode){
     int i, j, k, offset, x, y, tile_offset_x = 0, tile_offset_y = 0, pos_x = 0, pos_y = 0;
     gfx_buffer *tileset_buffer;
     gfx_buffer *sprite_buffer;
@@ -161,10 +142,13 @@ int test_scroll(int testobj_max, bool jodi){
     vga_set_palette(palette, 0, 15);
 
     tileset_buffer = gfx_get_tileset_buffer();
-    if(jodi) {
+
+    if(test_mode == 2) {
         load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
         vga_set_palette(palette, 0, 255);
-    } else {
+    } else if (test_mode == 1) {
+        render_pattern_to_buffer_2(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+    } else if (test_mode == 0) {
         render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
     }
 
@@ -297,10 +281,10 @@ int main(int argc, char *argv[]) {
     char *a = argv[1];
     char *b = argv[2];
     int num = atoi(a);
-    int jodi = atoi(b);
+    int test_mode = atoi(b);
 
     if(argc >= 2)
-        return test_scroll(num, jodi);
+        return test_scroll(num, test_mode);
     else
         return test_scroll(256, FALSE);
 }
