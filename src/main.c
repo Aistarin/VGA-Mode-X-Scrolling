@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <conio.h>
+#include <string.h>
 
 typedef struct testobj {
     int hspeed;
@@ -19,7 +20,7 @@ void render_pattern_to_buffer_1(byte *screen_buffer, word width, word height) {
 
     for(j = 0; j < height; j++) {
         for(i = 0; i < width; i++) {
-            if (!(j % (TILE_HEIGHT >> 1) && i % (TILE_WIDTH >> 1))) color = 0x40 + (((40 * (i + j)) / (height + width)));
+            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x40 + (((40 * (i + j)) / (height + width)));
             else color = 0x10 + (((16 * (i + j)) / (height + width)));
             // else color = 0;
             screen_buffer[width * j + i] = color;
@@ -32,7 +33,7 @@ void render_pattern_to_buffer_2(byte *screen_buffer, word width, word height) {
 
     for(j = 0; j < height; j++) {
         for(i = 0; i < width; i++) {
-            if (!(j % (TILE_HEIGHT >> 1) && i % (TILE_WIDTH >> 1))) color = 0x10 + (((16 * (i + j)) / (height + width)));
+            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x10 + (((16 * (i + j)) / (height + width)));
             else color = 0x40 + (((40 * (i + j)) / (height + width)));
             // else color = 0;
             screen_buffer[width * j + i] = color;
@@ -112,25 +113,27 @@ int test_scroll(int testobj_max, byte test_mode){
     int i, j, k, offset, x, y, tile_offset_x = 0, tile_offset_y = 0, pos_x = 0, pos_y = 0;
     gfx_buffer *tileset_buffer;
     gfx_buffer *sprite_buffer;
-    gfx_buffer *test_buffer;
+    byte *scratch_buffer;
     gfx_tilemap *tilemap_buffer;
     byte palette[256*3];
     char ch;
     int testobj_count = 0;
     dword compiled_sized = 0;
     bool exit_program = FALSE;
+    word sprite_width=48, sprite_height=48;
 
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
 
     timer_init();
 
-    test_buffer = gfx_create_empty_buffer(0, 64, 32, FALSE, 0);
-    load_bmp_to_buffer("dvd-logo.bmp", test_buffer->buffer, test_buffer->width, test_buffer->height, palette);
-    compiled_sized = spr_compile_planar_sprite(test_buffer->buffer, test_buffer->width, test_buffer->height, NULL, NULL);
+    scratch_buffer = malloc(0xFFFF);
 
-    sprite_buffer = gfx_create_empty_buffer(0, test_buffer->width, test_buffer->height, TRUE, compiled_sized);
-    spr_compile_planar_sprite(test_buffer->buffer, test_buffer->width, test_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
+    load_bmp_to_buffer("kitidle1.bmp", scratch_buffer, sprite_width, sprite_height, palette);
+    compiled_sized = spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
+
+    sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
+    spr_compile_planar_sprite(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
 
     // gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
@@ -144,13 +147,15 @@ int test_scroll(int testobj_max, byte test_mode){
     tileset_buffer = gfx_get_tileset_buffer();
 
     if(test_mode == 2) {
-        load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
+        load_bmp_to_buffer("jodi.bmp", scratch_buffer, tileset_buffer->width, tileset_buffer->height, palette);
         vga_set_palette(palette, 0, 255);
     } else if (test_mode == 1) {
-        render_pattern_to_buffer_2(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+        render_pattern_to_buffer_2(scratch_buffer, tileset_buffer->width, tileset_buffer->height);
     } else if (test_mode == 0) {
-        render_pattern_to_buffer_1(tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height);
+        render_pattern_to_buffer_1(scratch_buffer, tileset_buffer->width, tileset_buffer->height);
     }
+
+    memcpy(tileset_buffer->buffer, scratch_buffer, tileset_buffer->buffer_size);
 
     gfx_load_tileset();
 
