@@ -121,6 +121,8 @@ int test_scroll(int testobj_max, byte test_mode){
     dword compiled_sized = 0;
     bool exit_program = FALSE;
     word sprite_width=48, sprite_height=48;
+    word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
+    word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
 
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
@@ -176,9 +178,9 @@ int test_scroll(int testobj_max, byte test_mode){
         tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x + 112] = (byte) i;
     }
 
-    for(i = 0; i < 336; i++) {
-        x = i % 21;
-        y = i / 21;
+    for(i = 0; i < (render_tile_width * (render_tile_height - 1)); i++) {
+        x = i % render_tile_width;
+        y = i / render_tile_width;
         gfx_set_tile(tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x], x, y);
     }
 

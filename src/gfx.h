@@ -101,6 +101,7 @@ gfx_tilemap* gfx_get_tilemap_buffer();
 
 extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte sprite_height);
 extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
+extern void gfx_blit_8_x_8_tile(byte *vga_offset, byte *tile_offset);
 extern void gfx_blit_compiled_planar_sprite(byte *vga_offset, byte *sprite_offset, dword iter);
 
 #endif

@@ -165,9 +165,53 @@ _gfx_blit_16_x_16_tile: FUNCTION
     movsb
     movsb
     movsb
-    ;; no need to update source and destination after the final iteration
-    ;; add edi, PAGE_WIDTH - 4
-    ;; add esi, PAGE_WIDTH - 4
+
+    popa
+ENDFUNCTION
+
+GLOBAL _gfx_blit_8_x_8_tile
+_gfx_blit_8_x_8_tile: FUNCTION
+    %arg vga_offset:dword, tile_offset:dword
+    pusha
+    cld
+
+    mov edi, dword [vga_offset]         ;; set destination to where tile will be drawn in VRAM
+    mov esi, dword [tile_offset]        ;; set source to where tile is located in VRAM
+
+    ;; unrolled loop where we latch copy 4 pixels for each movsb (8 in total), incrementing
+    ;; esi and edi by the page width to go down into the next row
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
+    movsb
+    movsb
+    add edi, PAGE_WIDTH - 2
+    add esi, PAGE_WIDTH - 2
 
     popa
 ENDFUNCTION
