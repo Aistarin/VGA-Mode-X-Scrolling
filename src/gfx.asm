@@ -76,91 +76,76 @@ _gfx_blit_16_x_16_tile: FUNCTION
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
     movsb
     add edi, PAGE_WIDTH - 4
-    add esi, PAGE_WIDTH - 4
     movsb
     movsb
     movsb
