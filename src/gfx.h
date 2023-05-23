@@ -83,21 +83,21 @@ typedef struct gfx_tilemap {
     byte *buffer;                           // array of bytes that holds the tilemap data
 } gfx_tilemap;
 
-void gfx_init_video();
+void gfx_init_video(void);
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar, dword compiled_size);
 void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
-gfx_buffer* gfx_get_screen_buffer();
-gfx_buffer* gfx_get_tileset_buffer();
+gfx_buffer* gfx_get_screen_buffer(void);
+gfx_buffer* gfx_get_tileset_buffer(void);
 void gfx_set_tile(byte tile, byte x, byte y);
-void gfx_blit_screen_buffer();
-void gfx_mirror_page();
-void gfx_render_all();
-void gfx_load_tileset();
+void gfx_blit_screen_buffer(void);
+void gfx_mirror_page(void);
+void gfx_render_all(void);
+void gfx_load_tileset(void);
 void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height, bool flip_horz);
 void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 void gfx_load_linear_bitmap_to_planar_bitmap(byte *source_bitmap, byte *dest_bitmap, word width, word height);
 void gfx_set_scroll_offset(word x_offset, word y_offset);
-gfx_tilemap* gfx_get_tilemap_buffer();
+gfx_tilemap* gfx_get_tilemap_buffer(void);
 
 extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte sprite_height);
 extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
