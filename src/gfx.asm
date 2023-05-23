@@ -183,35 +183,26 @@ _gfx_blit_8_x_8_tile: FUNCTION
     movsb
     movsb
     add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
     movsb
     movsb
     add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
     movsb
     movsb
     add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
     movsb
     movsb
     add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
     movsb
     movsb
     add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
     movsb
     movsb
     add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
     movsb
     movsb
     add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
     movsb
     movsb
-    add edi, PAGE_WIDTH - 2
-    add esi, PAGE_WIDTH - 2
 
     popa
 ENDFUNCTION

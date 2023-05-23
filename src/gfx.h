@@ -3,8 +3,8 @@
 
 #include "common.h"
 
-#define TILE_WIDTH          16              // global tile width (in pixels)
-#define TILE_HEIGHT         16              // global tile height (in pixels)
+#define TILE_WIDTH          8              // global tile width (in pixels)
+#define TILE_HEIGHT         8              // global tile height (in pixels)
 
 enum gfx_color_depths {
     GFX_BUFFER_BPP_8,

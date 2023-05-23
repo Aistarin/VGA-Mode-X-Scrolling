@@ -41,6 +41,16 @@ void render_pattern_to_buffer_2(byte *screen_buffer, word width, word height) {
     }
 }
 
+void render_pattern_to_buffer_3(byte *screen_buffer, word width, word height) {
+    word i, j;
+
+    for(j = 0; j < height; j++) {
+        for(i = 0; i < width; i++) {
+            screen_buffer[width * j + i] = ((j / TILE_HEIGHT) * 16) + ((i / TILE_WIDTH) % 16);
+        }
+    }
+}
+
 void render_buffer_to_vram_slow(byte *screen_buffer) {
     word i, j;
     for(j = 0; j < PAGE_HEIGHT; j++) {
@@ -120,7 +130,7 @@ int test_scroll(int testobj_max, byte test_mode){
     int testobj_count = 0;
     dword compiled_sized = 0;
     bool exit_program = FALSE;
-    word sprite_width=48, sprite_height=48;
+    word sprite_width=64, sprite_height=32;
     word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
     word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
 
@@ -131,13 +141,13 @@ int test_scroll(int testobj_max, byte test_mode){
 
     scratch_buffer = malloc(0xFFFF);
 
-    load_bmp_to_buffer("kitidle1.bmp", scratch_buffer, sprite_width, sprite_height, palette);
+    load_bmp_to_buffer("dvd-logo.bmp", scratch_buffer, sprite_width, sprite_height, palette);
     compiled_sized = spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
 
     sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
     spr_compile_planar_sprite(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
 
-    // gfx_load_linear_bitmap_to_planar_bitmap(test_buffer->buffer, sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
+    // gfx_load_linear_bitmap_to_planar_bitmap(scratch_buffer, sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
     gfx_init_video();
 
@@ -148,9 +158,11 @@ int test_scroll(int testobj_max, byte test_mode){
 
     tileset_buffer = gfx_get_tileset_buffer();
 
-    if(test_mode == 2) {
+    if(test_mode == 3) {
         load_bmp_to_buffer("jodi.bmp", scratch_buffer, tileset_buffer->width, tileset_buffer->height, palette);
         vga_set_palette(palette, 0, 255);
+    } else if (test_mode == 2) {
+        render_pattern_to_buffer_3(scratch_buffer, tileset_buffer->width, tileset_buffer->height);
     } else if (test_mode == 1) {
         render_pattern_to_buffer_2(scratch_buffer, tileset_buffer->width, tileset_buffer->height);
     } else if (test_mode == 0) {

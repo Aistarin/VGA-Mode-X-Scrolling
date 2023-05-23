@@ -401,19 +401,28 @@ void gfx_init_video() {
 
 /* this loads the tileset into the VRAM after the two pages */
 void gfx_load_tileset() {
-    word i;
-    for(i = 0; i < 256; i++)
-        vga_blit_buffer_to_vram(
-            gfx_tileset_buffer->buffer,
-            gfx_tileset_buffer->width,
-            gfx_tileset_buffer->height,
-            (i % TILE_WIDTH) * TILE_WIDTH,
-            (i / TILE_WIDTH) * TILE_HEIGHT,
-            (i % render_tile_width) * TILE_WIDTH,
-            PAGE_HEIGHT * 2 + (i / render_tile_width) * TILE_HEIGHT,
-            TILE_WIDTH,
-            TILE_HEIGHT
-        );
+    byte plane;
+    word i, x, y, x_current = 0, y_current = 0;
+    byte *VGA = (byte *) 0xA0000;
+    byte *tileset_buffer = gfx_tileset_buffer->buffer;
+    dword tileset_width = gfx_tileset_buffer->width;
+    dword cur_offset;
+
+    for(plane = 0; plane < 4; plane++) {
+        // select one plane at a time
+        outp(SC_INDEX, MAP_MASK);
+        outp(SC_DATA, 1 << plane);
+        cur_offset = (PAGE_WIDTH >> 2) * PAGE_HEIGHT * 2;
+        for(i = 0; i < 256; i++) {
+            x_current = ((i % 16) * TILE_WIDTH) + plane;
+            y_current = (i / 16) * TILE_HEIGHT;
+            for(y = y_current; y < y_current + TILE_HEIGHT; y++) {
+                for(x = x_current; x < x_current + TILE_WIDTH; x += 4) {
+                    VGA[cur_offset++] = tileset_buffer[(y * tileset_width ) + x];
+                }
+            }
+        }
+    }
 }
 
 void _gfx_blit_planar_screen() {
@@ -437,6 +446,7 @@ void _gfx_blit_dirty_tiles() {
     gfx_tile_state *tile_index = screen_state_current->tile_index;
     byte tile_number;
     dword x, y, i, vga_offset, tile_offset, initial_offset = screen_state_current->current_render_page_offset;
+    dword initial_tile_offset = (PAGE_WIDTH >> 2) * PAGE_HEIGHT * 2;
     byte *VGA = (byte *) 0xA0000;
 
     /* pixel variable made volatile to prevent the compiler from
@@ -451,23 +461,19 @@ void _gfx_blit_dirty_tiles() {
         // skip tile if there is nothing to update
         if(!(tile_index[i].state & (GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2)))
             continue;
-
         tile_number = tile_index[i].tile;
         x = (word) (i % render_tile_width) * TILE_WIDTH;
         y = (word) (i / render_tile_width) * TILE_HEIGHT;
         vga_offset = ((y * PAGE_WIDTH + x) >> 2) + initial_offset;
-        x = (word) (tile_number % render_tile_width) * TILE_WIDTH;
-        y = (word) (tile_number / render_tile_width) * TILE_HEIGHT;
-        tile_offset = ((y + PAGE_HEIGHT * 2) * PAGE_WIDTH + x) >> 2;
+        tile_offset = initial_tile_offset + ((TILE_HEIGHT) * (TILE_WIDTH >> 2) * tile_number);
         // for(y = 0; y < TILE_HEIGHT; y++) {
         //     for(x = 0; x < TILE_WIDTH >> 2; x++) {
-        //         pixel = VGA[tile_offset + x];           //read pixel to load all the latches
+        //         pixel = VGA[tile_offset++];             //read pixel to load all the latches
         //         VGA[vga_offset + x] = 0;                //write four pixels in parallel
         //     }
-        //     tile_offset += PAGE_WIDTH >> 2;
         //     vga_offset += PAGE_WIDTH >> 2;
         // }
-        gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
+        gfx_blit_8_x_8_tile(&VGA[vga_offset], &VGA[tile_offset]);
 
         // clear tile state once it has been blitted
         tile_index[i].state &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE);
