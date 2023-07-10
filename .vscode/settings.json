@@ -6,6 +6,8 @@
         "cstdint": "cpp",
         "vga.h": "c",
         "spr.h": "c",
-        "gfx.h": "c"
+        "gfx.h": "c",
+        "timer.h": "c",
+        "stdlib.h": "c"
     }
 }

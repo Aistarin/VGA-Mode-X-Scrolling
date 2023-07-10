@@ -473,7 +473,7 @@ void _gfx_blit_dirty_tiles() {
         //     }
         //     vga_offset += PAGE_WIDTH >> 2;
         // }
-        gfx_blit_8_x_8_tile(&VGA[vga_offset], &VGA[tile_offset]);
+        gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
 
         // clear tile state once it has been blitted
         tile_index[i].state &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE);

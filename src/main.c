@@ -2,6 +2,7 @@
 #include "gfx.h"
 #include "spr.h"
 #include "timer.h"
+#include "keyboard.h"
 #include "common.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,6 +59,22 @@ void render_buffer_to_vram_slow(byte *screen_buffer) {
             vga_draw_pixel(i, j, screen_buffer[PAGE_WIDTH * j + i]);
         }
     }
+}
+
+int shutdown_handler(void) {
+    timer_shutdown();
+    keyboard_shutdown();
+    vga_exit_modex();
+
+    return 0;
+}
+
+int init_handler(void) {
+    timer_init();
+    keyboard_init();
+    gfx_init_video();
+
+    return 0;
 }
 
 void fskip(FILE *fp, int num_bytes)
@@ -133,11 +150,12 @@ int test_scroll(int testobj_max, byte test_mode){
     word sprite_width=64, sprite_height=32;
     word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
     word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
+    int speed_multiplier = 0;
 
     testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
     testobj *cur_testobj;
 
-    timer_init();
+    init_handler();
 
     scratch_buffer = malloc(0xFFFF);
 
@@ -148,8 +166,6 @@ int test_scroll(int testobj_max, byte test_mode){
     spr_compile_planar_sprite(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
 
     // gfx_load_linear_bitmap_to_planar_bitmap(scratch_buffer, sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
-
-    gfx_init_video();
 
     palette[0] = 0;
     palette[1] = 0;
@@ -207,40 +223,22 @@ int test_scroll(int testobj_max, byte test_mode){
 
         while(timer_step()) {
 
-            if(kbhit()) {
-                ch = getch();
-                if(ch == 27)
-                    exit_program = TRUE;
-                else if(ch == 119)  // w
-                    pos_y -= 1;
-                else if(ch == 115)  // s
-                    pos_y += 1;
-                else if(ch == 97)   // a
-                    pos_x -= 1;
-                else if(ch == 100)  // d
-                    pos_x += 1;
-                else if(ch == 113) { // q
-                    pos_x -= 1;
-                    pos_y -= 1;
-                } else if(ch == 101) { // E
-                    pos_x += 1;
-                    pos_y += 1;
-                }
-                else if(ch == 87)  // W
-                    pos_y -= TILE_HEIGHT * 2;
-                else if(ch == 83)  // S
-                    pos_y += TILE_HEIGHT * 2;
-                else if(ch == 65)   // A
-                    pos_x -= TILE_WIDTH * 2;
-                else if(ch == 68)  // D
-                    pos_x += TILE_WIDTH * 2;
-                else if(ch == 81) { // Q
-                    pos_x -= TILE_WIDTH * 2;
-                    pos_y -= TILE_HEIGHT * 2;
-                } else if(ch == 69) { // E
-                    pos_x += TILE_WIDTH * 2;
-                    pos_y += TILE_HEIGHT * 2;
-                }
+            speed_multiplier = !is_pressing_lshift();
+
+            if(is_pressing_w()) {
+                pos_y -= speed_multiplier ? 1 : TILE_HEIGHT;
+            }
+            if(is_pressing_s()) {
+                pos_y += speed_multiplier ? 1 : TILE_HEIGHT;
+            }
+            if(is_pressing_a()) {
+                pos_x -= speed_multiplier ? 1 : TILE_WIDTH;
+            }
+            if(is_pressing_d()) {
+                pos_x += speed_multiplier ? 1 : TILE_WIDTH;
+            }
+            if(is_pressing_escape()) {
+                exit_program = TRUE;
             }
 
             if(pos_y < 0)
@@ -288,8 +286,7 @@ int test_scroll(int testobj_max, byte test_mode){
         }
     }
 
-    vga_exit_modex();
-    timer_shutdown();
+    shutdown_handler();
 
     printf("total objects rendered: %d\n", testobj_count);
 
