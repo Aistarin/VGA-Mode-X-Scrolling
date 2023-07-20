@@ -8,6 +8,7 @@
         "spr.h": "c",
         "gfx.h": "c",
         "timer.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "common.h": "c"
     }
 }

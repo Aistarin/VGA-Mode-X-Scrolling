@@ -1,7 +1,7 @@
 #ifndef VGA_H_
 #define VGA_H_
 
-#include "common.h"
+#include "src/common.h"
 #include <conio.h>
 #include <i86.h>
 

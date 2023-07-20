@@ -1,7 +1,7 @@
 #ifndef GFX_H_
 #define GFX_H_
 
-#include "common.h"
+#include "src/common.h"
 
 #define TILE_WIDTH          16              // global tile width (in pixels)
 #define TILE_HEIGHT         16              // global tile height (in pixels)
