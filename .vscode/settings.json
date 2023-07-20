@@ -9,6 +9,7 @@
         "gfx.h": "c",
         "timer.h": "c",
         "stdlib.h": "c",
-        "common.h": "c"
+        "common.h": "c",
+        "bitmap.h": "c"
     }
 }

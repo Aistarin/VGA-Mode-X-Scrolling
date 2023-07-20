@@ -1,10 +1,10 @@
+#include "common.h"
 #include "gfx/vga.h"
 #include "gfx/gfx.h"
 #include "gfx/spr.h"
-#include "timer.h"
-#include "keyboard.h"
-#include "common.h"
-#include "bitmap.h"
+#include "io/timer.h"
+#include "io/keyboard.h"
+#include "io/bitmap.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

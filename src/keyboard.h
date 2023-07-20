@@ -1,7 +1,7 @@
 #ifndef KEYBOARD_H_
 #define KEYBOARD_H_
 
-#include "common.h"
+#include "src/common.h"
 
 void keyboard_init();
 void keyboard_shutdown();
