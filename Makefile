@@ -9,15 +9,15 @@ export WIPFC := $(WIPFC)
 OBJ_LIST = vga.obj gfx.obj gfx-asm.obj spr.obj timer.obj keyboard.obj bitmap.obj
 TEST_OBJ_LIST = pattern.obj
 
-scroll : $(OBJ_LIST) $(TEST_OBJ_LIST)
+scroll : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
 	cp res/jodi.bmp build/jodi.bmp
 	cp res/jodi-spr.bmp build/jodi-spr.bmp
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/scroll.c -c -fo=obj/scroll.obj
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/scroll.exe
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
-tile : $(OBJ_LIST) $(TEST_OBJ_LIST)
+tile : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/tile.c -c -fo=obj/tile.obj
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/scroll.exe
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
 pattern.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/pattern.c -c -fo=obj/pattern.obj
@@ -44,7 +44,10 @@ bitmap.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/bitmap.c -c -fo=obj/bitmap.obj
 
 run :
-	$(DOSBOX) build/scroll.exe
+	$(DOSBOX) build/game.exe
+
+send :
+	kermit -l $(SERIAL_PORT) -b $(SERIAL_SPEED) -i -s build/game.exe
 
 clean :
-	rm obj/* build/* *.err
+	rm -f obj/* build/* *.err
