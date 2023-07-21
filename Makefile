@@ -11,13 +11,13 @@ TEST_OBJ_LIST = pattern.obj
 
 scroll : $(OBJ_LIST) $(TEST_OBJ_LIST)
 	cp res/jodi.bmp build/jodi.bmp
-	cp res/dvd-logo.bmp build/dvd-logo.bmp
+	cp res/jodi-spr.bmp build/jodi-spr.bmp
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/scroll.c -c -fo=obj/scroll.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/scroll.exe
 
 tile : $(OBJ_LIST) $(TEST_OBJ_LIST)
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/tile.c -c -fo=obj/tile.obj
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/tile.exe
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/scroll.exe
 
 pattern.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/pattern.c -c -fo=obj/pattern.obj
@@ -43,11 +43,8 @@ keyboard.obj :
 bitmap.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/bitmap.c -c -fo=obj/bitmap.obj
 
-run_scroll :
+run :
 	$(DOSBOX) build/scroll.exe
-
-run_tile :
-	$(DOSBOX) build/tile.exe
 
 clean :
 	rm obj/* build/* *.err

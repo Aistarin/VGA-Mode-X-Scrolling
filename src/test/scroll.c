@@ -44,7 +44,7 @@ int test_scroll(int testobj_max, byte test_mode){
     int testobj_count = 0;
     dword compiled_sized = 0;
     bool exit_program = FALSE;
-    word sprite_width=64, sprite_height=32;
+    word sprite_width=64, sprite_height=64;
     word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
     word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
     int speed_multiplier = 0;
@@ -56,7 +56,7 @@ int test_scroll(int testobj_max, byte test_mode){
 
     scratch_buffer = malloc(0xFFFF);
 
-    load_bmp_to_buffer("dvd-logo.bmp", scratch_buffer, sprite_width, sprite_height, palette);
+    load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette);
     compiled_sized = spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
 
     sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
