@@ -10,6 +10,7 @@
         "timer.h": "c",
         "stdlib.h": "c",
         "common.h": "c",
-        "bitmap.h": "c"
+        "bitmap.h": "c",
+        "pattern.h": "c"
     }
 }

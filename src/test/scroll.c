@@ -5,6 +5,7 @@
 #include "src/io/timer.h"
 #include "src/io/keyboard.h"
 #include "src/io/bitmap.h"
+#include "src/test/pattern.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,55 +17,10 @@ typedef struct testobj {
     int ypos;
 } testobj;
 
-void render_pattern_to_buffer_1(byte *screen_buffer, word width, word height) {
-    word i, j, color;
-
-    for(j = 0; j < height; j++) {
-        for(i = 0; i < width; i++) {
-            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x40 + (((40 * (i + j)) / (height + width)));
-            else color = 0x10 + (((16 * (i + j)) / (height + width)));
-            // else color = 0;
-            screen_buffer[width * j + i] = color;
-        }
-    }
-}
-
-void render_pattern_to_buffer_2(byte *screen_buffer, word width, word height) {
-    word i, j, color;
-
-    for(j = 0; j < height; j++) {
-        for(i = 0; i < width; i++) {
-            if (!(j % TILE_HEIGHT && i % TILE_WIDTH)) color = 0x10 + (((16 * (i + j)) / (height + width)));
-            else color = 0x40 + (((40 * (i + j)) / (height + width)));
-            // else color = 0;
-            screen_buffer[width * j + i] = color;
-        }
-    }
-}
-
-void render_pattern_to_buffer_3(byte *screen_buffer, word width, word height) {
-    word i, j;
-
-    for(j = 0; j < height; j++) {
-        for(i = 0; i < width; i++) {
-            screen_buffer[width * j + i] = ((j / TILE_HEIGHT) * 16) + ((i / TILE_WIDTH) % 16);
-        }
-    }
-}
-
-void render_buffer_to_vram_slow(byte *screen_buffer) {
-    word i, j;
-    for(j = 0; j < PAGE_HEIGHT; j++) {
-        for(i = 0; i < PAGE_WIDTH; i++) {
-            vga_draw_pixel(i, j, screen_buffer[PAGE_WIDTH * j + i]);
-        }
-    }
-}
-
 int shutdown_handler(void) {
     timer_shutdown();
     keyboard_shutdown();
-    vga_exit_modex();
+    gfx_shutdown();
 
     return 0;
 }
@@ -72,7 +28,7 @@ int shutdown_handler(void) {
 int init_handler(void) {
     timer_init();
     keyboard_init();
-    gfx_init_video();
+    gfx_init();
 
     return 0;
 }
@@ -119,11 +75,11 @@ int test_scroll(int testobj_max, byte test_mode){
         load_bmp_to_buffer("jodi.bmp", scratch_buffer, tileset_buffer->width, tileset_buffer->height, palette);
         vga_set_palette(palette, 0, 255);
     } else if (test_mode == 2) {
-        render_pattern_to_buffer_3(scratch_buffer, tileset_buffer->width, tileset_buffer->height);
+        render_pattern_to_buffer_3(scratch_buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
     } else if (test_mode == 1) {
-        render_pattern_to_buffer_2(scratch_buffer, tileset_buffer->width, tileset_buffer->height);
+        render_pattern_to_buffer_2(scratch_buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
     } else if (test_mode == 0) {
-        render_pattern_to_buffer_1(scratch_buffer, tileset_buffer->width, tileset_buffer->height);
+        render_pattern_to_buffer_1(scratch_buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
     }
 
     memcpy(tileset_buffer->buffer, scratch_buffer, tileset_buffer->buffer_size);

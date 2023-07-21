@@ -48,6 +48,19 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
     return empty_buffer;
 }
 
+void _set_tile_states(gfx_screen_state *screen_state, byte tile_state, bool clear, byte x, byte y, byte max_x, byte max_y) {
+    byte i, j;
+    word tile_offset;
+    for(j = y; j <= max_y; j++)
+        for(i = x; i <= max_x; i++){
+            tile_offset = ((word) j * (word) screen_state->horz_tiles) + (word) i;
+            if(clear)
+                screen_state->tile_index[tile_offset].state &= ~(tile_state);
+            else
+                screen_state->tile_index[tile_offset].state |= tile_state;
+        };
+}
+
 struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
     struct gfx_screen_state* screen_state;
     word tile_count = (word) horz_tiles * (word) vert_tiles;
@@ -65,6 +78,8 @@ struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
     /* set pointers to contiguous memory locations */
     screen_state->tile_index = (gfx_tile_state *) ((byte *) screen_state + sizeof(struct gfx_screen_state));
     memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
+
+    _set_tile_states(screen_state, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, 0, 0, horz_tiles - 1, vert_tiles - 1);
 
     return screen_state;
 }
@@ -88,19 +103,6 @@ struct gfx_tilemap* _init_tilemap(byte horz_tiles, byte vert_tiles) {
     memset(tilemap->buffer, 0, sizeof(byte) * tile_count);
 
     return tilemap;
-}
-
-void _set_tile_states(gfx_screen_state *screen_state, byte tile_state, bool clear, byte x, byte y, byte max_x, byte max_y) {
-    byte i, j;
-    word tile_offset;
-    for(j = y; j <= max_y; j++)
-        for(i = x; i <= max_x; i++){
-            tile_offset = ((word) j * (word) screen_state->horz_tiles) + (word) i;
-            if(clear) 
-                screen_state->tile_index[tile_offset].state &= ~(tile_state);
-            else
-                screen_state->tile_index[tile_offset].state |= tile_state;
-        };
 }
 
 void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_buffer, word dest_x, word dest_y, word width, word height, bool flip_horz) {
@@ -361,7 +363,7 @@ void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word des
 /**
  * Video initialization
  **/
-void gfx_init_video() {
+void gfx_init() {
     word i;
 
     vga_init_modex();
@@ -397,6 +399,11 @@ void gfx_init_video() {
     sprites_to_draw = malloc(sizeof(struct gfx_sprite_to_draw) * 256);
 
     screen_tilemap = _init_tilemap(255, 255);
+}
+
+void gfx_shutdown() {
+    // TODO: free all memory
+    vga_exit_modex();
 }
 
 /* this loads the tileset into the VRAM after the two pages */

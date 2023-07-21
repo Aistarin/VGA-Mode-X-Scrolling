@@ -83,7 +83,8 @@ typedef struct gfx_tilemap {
     byte *buffer;                           // array of bytes that holds the tilemap data
 } gfx_tilemap;
 
-void gfx_init_video(void);
+void gfx_init(void);
+void gfx_shutdown(void);
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar, dword compiled_size);
 void gfx_blit_buffer_to_active_page(gfx_buffer* buffer, word dest_x, word dest_y);
 gfx_buffer* gfx_get_screen_buffer(void);

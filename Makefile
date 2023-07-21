@@ -7,12 +7,20 @@ export EDPATH := $(EDPATH)
 export WIPFC := $(WIPFC)
 
 OBJ_LIST = vga.obj gfx.obj gfx-asm.obj spr.obj timer.obj keyboard.obj bitmap.obj
+TEST_OBJ_LIST = pattern.obj
 
-scroll : $(OBJ_LIST)
+scroll : $(OBJ_LIST) $(TEST_OBJ_LIST)
 	cp res/jodi.bmp build/jodi.bmp
 	cp res/dvd-logo.bmp build/dvd-logo.bmp
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/scroll.c -c -fo=obj/scroll.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/scroll.exe
+
+tile : $(OBJ_LIST) $(TEST_OBJ_LIST)
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/tile.c -c -fo=obj/tile.obj
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/tile.exe
+
+pattern.obj :
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/pattern.c -c -fo=obj/pattern.obj
 
 gfx.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/gfx/gfx.c -c -fo=obj/gfx.obj
@@ -35,8 +43,11 @@ keyboard.obj :
 bitmap.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/bitmap.c -c -fo=obj/bitmap.obj
 
-run :
+run_scroll :
 	$(DOSBOX) build/scroll.exe
+
+run_tile :
+	$(DOSBOX) build/tile.exe
 
 clean :
 	rm obj/* build/* *.err
