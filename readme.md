@@ -40,11 +40,10 @@ G:
 If you have a USB to Serial adapter and Null Modem serial cable, you can use Kermit to easily transfer files between your development machine and your real DOS hardware.
 - Ensure your DOS machine is powered down first before trying to connect the Null Modem serial cable to it
 - Set up your USB to Serial adapter on your development machine
-    - Under Linux, you'll have to add yourself to the group that owns whatever device your adapter maps to
+    - Under Linux, you'll have to add yourself to the group that owns whatever device your adapter maps to before you can use the device as a non-root user (may vary depending on your disto)
 ```
 usermod -a -G dialout $USER
 ```
-    - NOTE: this may vary depending on your disto
 - Install Kermit on both your development machine anf your DOS machine
     - Under Linux, you can simply install ckermit via `sudo apt-get install ckermit`
     - Under DOS, you can download it from here: http://www.columbia.edu/kermit/mskermit.html
@@ -62,6 +61,12 @@ kermit set speed 115200, rec game.exe
     - NOTE: subsequent runs can omit the `set speed 115200`
 - Wait for the file to transfer
     - This process should begin immediately, if not you may want to troubleshoot your serial connection or set a lower baud rate on both ends (e.g. 9600bps)
+
+Alternatively, you can also set up DOSBox to use your serial port and kick off the file transfer from there.
+```
+serial1=directserial realport:ttyUSB0
+kermit set speed 115200, send game.exe
+```
 
 # ATTRIBUTIONS
 A lot of this code is loosely based on several sources, most derived from Michael Abrash's works featured in _Graphics Programming Black Book_.
