@@ -6,11 +6,13 @@ export WATCOM := $(WATCOM)
 export EDPATH := $(EDPATH)
 export WIPFC := $(WIPFC)
 
-scroll : main.obj vga.obj gfx.obj gfx-asm.obj spr.obj timer.obj keyboard.obj bitmap.obj
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/scroll.exe
+OBJ_LIST = vga.obj gfx.obj gfx-asm.obj spr.obj timer.obj keyboard.obj bitmap.obj
 
-main.obj :
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/main.c -c -fo=obj/main.obj
+scroll : $(OBJ_LIST)
+	cp res/jodi.bmp build/jodi.bmp
+	cp res/dvd-logo.bmp build/dvd-logo.bmp
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/scroll.c -c -fo=obj/scroll.obj
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/scroll.exe
 
 gfx.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/gfx/gfx.c -c -fo=obj/gfx.obj
@@ -37,4 +39,4 @@ run :
 	$(DOSBOX) build/scroll.exe
 
 clean :
-	rm obj/*.obj build/scroll.exe
+	rm obj/* build/* *.err

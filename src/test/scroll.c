@@ -1,10 +1,10 @@
-#include "common.h"
-#include "gfx/vga.h"
-#include "gfx/gfx.h"
-#include "gfx/spr.h"
-#include "io/timer.h"
-#include "io/keyboard.h"
-#include "io/bitmap.h"
+#include "src/common.h"
+#include "src/gfx/vga.h"
+#include "src/gfx/gfx.h"
+#include "src/gfx/spr.h"
+#include "src/io/timer.h"
+#include "src/io/keyboard.h"
+#include "src/io/bitmap.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -88,7 +88,7 @@ int test_scroll(int testobj_max, byte test_mode){
     int testobj_count = 0;
     dword compiled_sized = 0;
     bool exit_program = FALSE;
-    word sprite_width=48, sprite_height=48;
+    word sprite_width=64, sprite_height=32;
     word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
     word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
     int speed_multiplier = 0;
@@ -100,7 +100,7 @@ int test_scroll(int testobj_max, byte test_mode){
 
     scratch_buffer = malloc(0xFFFF);
 
-    load_bmp_to_buffer("kitidle1.bmp", scratch_buffer, sprite_width, sprite_height, palette);
+    load_bmp_to_buffer("dvd-logo.bmp", scratch_buffer, sprite_width, sprite_height, palette);
     compiled_sized = spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
 
     sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
@@ -216,9 +216,8 @@ int test_scroll(int testobj_max, byte test_mode){
         gfx_set_scroll_offset(pos_x, pos_y);
         for(j = 0; j < testobj_count; j++) {
             cur_testobj = &testobj_list[j];
-            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height, cur_testobj->hspeed > 0 ? TRUE : FALSE);
+            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height, cur_testobj->hspeed > 0 ? FALSE : TRUE);
         }
-        gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) (pos_x % TILE_WIDTH), (word) (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height, TRUE);
         gfx_render_all();
 
         timer_end();
