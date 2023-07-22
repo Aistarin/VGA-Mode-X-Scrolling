@@ -19,6 +19,11 @@ tile : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/tile.c -c -fo=obj/tile.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
+map : clean $(OBJ_LIST)
+	cp res/testtile.bmp build/testtile.bmp
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/map.c -c -fo=obj/map.obj
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
+
 pattern.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/pattern.c -c -fo=obj/pattern.obj
 

@@ -8,7 +8,6 @@ int main(int argc, char *argv[]) {
     bool to_blank = TRUE;
     gfx_buffer *tileset_buffer;
     gfx_tilemap *tilemap_buffer;
-    byte *tile_ref;
 
     gfx_init();
 
