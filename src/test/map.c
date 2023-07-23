@@ -9,6 +9,10 @@ int view_pos_x = 0;
 int view_pos_y = 0;
 int tile_cursor_x = 0;
 int tile_cursor_y = 0;
+int tile_cursor_x_rel = 0;
+int tile_cursor_y_rel = 0;
+int tile_cursor_x_rel_max = (PAGE_WIDTH / TILE_WIDTH) - 2;
+int tile_cursor_y_rel_max = ((PAGE_HEIGHT / TILE_HEIGHT) - 3);
 byte tile_cursor_index = 1;
 byte tile_tilemap_index = 0;
 gfx_buffer *tileset_buffer;
@@ -19,22 +23,49 @@ byte get_tile_at_pos(int x, int y) {
 }
 
 void write_tile() {
-    gfx_set_tile(tile_cursor_index, (byte) tile_cursor_x, (byte) tile_cursor_y);
+    gfx_set_tile(tile_cursor_index, (byte) tile_cursor_x_rel, (byte) tile_cursor_y_rel);
     tilemap_buffer->buffer[(tile_cursor_y * (int) tilemap_buffer->horz_tiles) + tile_cursor_x] = tile_cursor_index;
     tile_tilemap_index = tile_cursor_index;
 }
 
 void move_tile_cursor(int x_delta, int y_delta) {
-    gfx_set_tile(tile_tilemap_index, tile_cursor_x, tile_cursor_y);
+    gfx_set_tile(tile_tilemap_index, (byte) tile_cursor_x_rel, (byte) tile_cursor_y_rel);
+
     tile_cursor_x += x_delta;
     tile_cursor_y += y_delta;
+    tile_cursor_x_rel += x_delta;
+    tile_cursor_y_rel += y_delta;
+
+    if(tile_cursor_x_rel > tile_cursor_x_rel_max) {
+        tile_cursor_x_rel = tile_cursor_x_rel_max;
+        view_pos_x += TILE_WIDTH;
+    }
+    if(tile_cursor_y_rel > tile_cursor_y_rel_max) {
+        tile_cursor_y_rel = tile_cursor_y_rel_max;
+        view_pos_y += TILE_HEIGHT;
+    }
+    if(tile_cursor_x_rel < 0) {
+        tile_cursor_x_rel = 0;
+        view_pos_x -= TILE_WIDTH;
+    }
+    if(tile_cursor_y_rel < 0) {
+        tile_cursor_y_rel = 0;
+        view_pos_y -= TILE_HEIGHT;
+    }
 
     if (tile_cursor_x < 0) {
         tile_cursor_x = 0;
     }
-
-    if(tile_cursor_y < 0) {
+    if (tile_cursor_y < 0) {
         tile_cursor_y = 0;
+    }
+
+    if (view_pos_x < 0) {
+        view_pos_x = 0;
+    }
+
+    if(view_pos_y < 0) {
+        view_pos_y = 0;
     }
 
     tile_tilemap_index = get_tile_at_pos(tile_cursor_x, tile_cursor_y);
@@ -60,9 +91,9 @@ int main(int argc, char *argv[]) {
         }
 
         if(tile_blink) {
-            gfx_set_tile(tile_cursor_index, tile_cursor_x, tile_cursor_y);
+            gfx_set_tile(tile_cursor_index, (byte) tile_cursor_x_rel, (byte) tile_cursor_y_rel);
         } else {
-            gfx_set_tile(tile_tilemap_index, tile_cursor_x, tile_cursor_y);
+            gfx_set_tile(tile_tilemap_index, (byte) tile_cursor_x_rel, (byte) tile_cursor_y_rel);
         }
 
         if(kbhit()) {
@@ -107,26 +138,7 @@ int main(int argc, char *argv[]) {
                     write_tile();
                     move_tile_cursor(1, 0);
                     break;
-                case 105:   // i
-                    view_pos_y -= TILE_HEIGHT;
-                    break;
-                case 106:   // j
-                    view_pos_x -= TILE_WIDTH;
-                    break;
-                case 107:   // k
-                    view_pos_y += TILE_HEIGHT;
-                    break;
-                case 108:   // l
-                    view_pos_x += TILE_WIDTH;
-                    break;
             }
-        }
-        if (view_pos_x < 0) {
-            view_pos_x = 0;
-        }
-
-        if(view_pos_y < 0) {
-            view_pos_y = 0;
         }
 
         gfx_set_scroll_offset(view_pos_x, view_pos_y);
