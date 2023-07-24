@@ -97,10 +97,11 @@ struct gfx_tilemap* _init_tilemap(byte horz_tiles, byte vert_tiles) {
     tilemap->vert_tiles = vert_tiles;
     tilemap->horz_offset = 0;
     tilemap->vert_offset = 0;
+    tilemap->buffer_size = sizeof(byte) * tile_count;
 
     /* bitmap buffer is memory immediately after main struct */
     tilemap->buffer = (byte *) tilemap + sizeof(struct gfx_tilemap);
-    memset(tilemap->buffer, 0, sizeof(byte) * tile_count);
+    memset(tilemap->buffer, 0, tilemap->buffer_size);
 
     return tilemap;
 }
@@ -297,6 +298,17 @@ void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte 
 void gfx_set_tile(byte tile, byte x, byte y) {
     _set_tile_for_screen_state(screen_state_page_0, tile, x, y, FALSE);
     _set_tile_for_screen_state(screen_state_page_1, tile, x, y, FALSE);
+}
+
+void gfx_reload_tilemap(byte x_offset, byte y_offset) {
+    int i, tilemap_x, tilemap_y;
+    byte tile;
+    for(i = 0; i < render_tile_width * render_tile_height; i++) {
+        tilemap_x = x_offset + (i % render_tile_width);
+        tilemap_y = y_offset + (i / render_tile_width);
+        tile = screen_tilemap->buffer[(tilemap_y * screen_tilemap->horz_tiles) + tilemap_x];
+        gfx_set_tile(tile, i % render_tile_width, i / render_tile_width);
+    }
 }
 
 void _gfx_draw_tile_to_planar_screen(byte tile, word tile_x, word tile_y) {

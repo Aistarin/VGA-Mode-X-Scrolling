@@ -2,6 +2,7 @@
 #include "src/gfx/gfx.h"
 #include "src/gfx/vga.h"
 #include "src/io/bitmap.h"
+#include "src/io/file.h"
 #include <conio.h>
 #include <stdio.h>
 
@@ -85,6 +86,10 @@ int main(int argc, char *argv[]) {
     vga_set_palette(palette, 0, 255);
     gfx_load_tileset();
 
+    read_bytes_from_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
+    tile_tilemap_index = tilemap_buffer->buffer[0];
+    gfx_reload_tilemap(tile_cursor_x, tile_cursor_y);
+
     while(!exit_program) {
         if(tile_blink_timer++ % 15 == 0) {
             tile_blink ^= 1;
@@ -146,6 +151,7 @@ int main(int argc, char *argv[]) {
     }
 
     gfx_shutdown();
+    write_bytes_to_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
 
     return 0;
 }

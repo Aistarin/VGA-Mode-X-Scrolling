@@ -6,7 +6,7 @@ export WATCOM := $(WATCOM)
 export EDPATH := $(EDPATH)
 export WIPFC := $(WIPFC)
 
-OBJ_LIST = vga.obj gfx.obj gfx-asm.obj spr.obj timer.obj keyboard.obj bitmap.obj
+OBJ_LIST = vga.obj gfx.obj gfx-asm.obj spr.obj timer.obj keyboard.obj bitmap.obj file.obj
 TEST_OBJ_LIST = pattern.obj
 
 scroll : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
@@ -21,6 +21,7 @@ tile : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
 
 map : clean $(OBJ_LIST)
 	cp res/testtile.bmp build/testtile.bmp
+	cp res/test.map build/test.map
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/map.c -c -fo=obj/map.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
@@ -39,14 +40,17 @@ spr.obj :
 vga.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/gfx/vga.c -c -fo=obj/vga.obj
 
-timer.obj :
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/timer.c -c -fo=obj/timer.obj
+bitmap.obj :
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/bitmap.c -c -fo=obj/bitmap.obj
+
+file.obj :
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/file.c -c -fo=obj/file.obj
 
 keyboard.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/keyboard.c -c -fo=obj/keyboard.obj
 
-bitmap.obj :
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/bitmap.c -c -fo=obj/bitmap.obj
+timer.obj :
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/timer.c -c -fo=obj/timer.obj
 
 run :
 	$(DOSBOX) build/game.exe
