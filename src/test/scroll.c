@@ -44,7 +44,7 @@ int test_scroll(int testobj_max, byte test_mode){
     int testobj_count = 0;
     dword compiled_sized = 0;
     bool exit_program = FALSE;
-    word sprite_width=64, sprite_height=64;
+    word sprite_width=32, sprite_height=56;
     word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
     word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
     int speed_multiplier = 0;
