@@ -11,6 +11,7 @@
         "stdlib.h": "c",
         "common.h": "c",
         "bitmap.h": "c",
-        "pattern.h": "c"
+        "pattern.h": "c",
+        "ecs.h": "c"
     }
 }
