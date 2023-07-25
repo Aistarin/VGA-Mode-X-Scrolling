@@ -1,6 +1,7 @@
 #include "src/common.h"
 #include "src/ecs/ecs.h"
 #include "src/gfx/gfx.h"
+#include "src/gfx/spr.h"
 #include "src/gfx/vga.h"
 #include "src/io/bitmap.h"
 #include "src/io/file.h"
@@ -10,12 +11,42 @@
 
 bool exit_program = FALSE;
 byte palette[256*3];
+byte scratch_buffer[0xFFFF];
 
 int view_pos_x = 0;
 int view_pos_y = 0;
 
 gfx_buffer *tileset_buffer;
 gfx_tilemap *tilemap_buffer;
+
+void* load_sprite(char *filename, word sprite_width, word sprite_height) {
+    gfx_buffer *sprite_buffer;
+    dword compiled_sized = 0;
+
+    load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette);
+    compiled_sized = spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
+
+    sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
+    spr_compile_planar_sprite(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
+
+    return sprite_buffer;
+}
+
+void draw_entity(ecs_entity *entity) {
+    ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
+    ecs_component_drawable *component_drawable = entity->components[ECS_COMPONENT_TYPE_DRAWABLE];
+
+    gfx_draw_sprite_to_screen(
+        (gfx_buffer *) component_drawable->drawable,
+        0,
+        0,
+        (word) component_position->x + component_drawable->x_offset,
+        (word) component_position->y + component_drawable->y_offset,
+        component_drawable->width,
+        component_drawable->height,
+        component_drawable->flip_horz
+    );
+}
 
 void handle_input() {
     if(kbhit()) {
@@ -28,36 +59,27 @@ void handle_input() {
 }
 
 void handle_logic() {
-    // TODO
+    ecs_handle();
 }
 
 void handle_graphics() {
-    int i;
-    // entity *entity_current;
-
-    /* scroll screen before drawing sprites */
+    /* scroll screen before rendering all */
     gfx_set_scroll_offset(view_pos_x, view_pos_y);
-
-    // for(i = 0; i < entity_count; i++) {
-    //     entity_current = &entity_list[i];
-    //     gfx_draw_sprite_to_screen(
-    //         entity_current->sprite_buffer,
-    //         0,
-    //         0,
-    //         (word) entity_current->xpos,
-    //         (word) entity_current->ypos,
-    //         entity_current->sprite_buffer->width,
-    //         entity_current->sprite_buffer->height,
-    //         entity_current->sprite_flip
-    //     );
-    // }
-
     gfx_render_all();
 }
 
 int main(int argc, char *argv[]) {
+    ecs_entity *player;
+    ecs_component_position *component_position;
+    ecs_component_drawable *component_drawable;
+    void *drawable;
+
     ecs_init();
     gfx_init();
+
+    ecs_set_drawing_function(draw_entity);
+
+    drawable = load_sprite("jodi-spr.bmp", 32, 56);
 
     tileset_buffer = gfx_get_tileset_buffer();
     tilemap_buffer = gfx_get_tilemap_buffer();
@@ -68,6 +90,13 @@ int main(int argc, char *argv[]) {
 
     read_bytes_from_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
     gfx_reload_tilemap(0, 0);
+
+    player = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_PLAYER);
+    component_position = (ecs_component_position *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_POSITION);
+    component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_DRAWABLE);
+
+    component_drawable->display = TRUE;
+    component_drawable->drawable = drawable;
 
     while(!exit_program) {
         handle_input();

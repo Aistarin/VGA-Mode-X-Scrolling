@@ -26,8 +26,13 @@ typedef struct ecs_entity {
     byte entity_id;
     byte entity_type;
     byte component_count;
-    void *components[COMPONENT_MAX];
+    void *components[COMPONENT_MAX];            // max components each entity can have attached to it
 } ecs_entity;
+
+typedef struct ecs_entity_list {
+    byte entity_count;
+    ecs_entity entities[ENTITY_MAX];
+} ecs_entity_list;
 
 typedef struct ecs_component_list {
     byte component_type;
@@ -49,8 +54,10 @@ typedef struct ecs_component_drawable {
     byte entity_id;
     int x_offset;
     int y_offset;
+    word width;
+    word height;
     bool display;
-    bool sprite_flip;
+    bool flip_horz;
     void *drawable;
 } ecs_component_drawable;
 
@@ -63,6 +70,11 @@ typedef struct ecs_component_physics {
 } ecs_component_physics;
 
 void ecs_init(void);
+void ecs_handle(void);
 void ecs_shutdown(void);
+
+void ecs_set_drawing_function(void (*func)(ecs_entity*));
+ecs_entity* ecs_instantiate_empty_entity(byte entity_type);
+void* ecs_attach_component_to_entity(ecs_entity *entity, byte component_type);
 
 #endif
