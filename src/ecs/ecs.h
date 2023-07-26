@@ -3,7 +3,7 @@
 
 #include "src/common.h"
 
-#define ENTITY_MAX 256
+#define ENTITY_MAX 255
 #define COMPONENT_MAX 16
 
 enum ecs_entity_types {

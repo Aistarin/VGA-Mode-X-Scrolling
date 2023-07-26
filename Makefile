@@ -63,7 +63,7 @@ timer.obj :
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/io/timer.c -c -fo=obj/timer.obj
 
 run :
-	$(DOSBOX) build/game.exe
+	$(DOSBOX) -c "mount c ./build" -c "c:" -c "game.exe > test.log" -c "exit"
 
 send :
 	kermit -l $(SERIAL_PORT) -b $(SERIAL_SPEED) -i -s build/game.exe

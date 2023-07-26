@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
     ecs_entity *player;
     ecs_component_position *component_position;
     ecs_component_drawable *component_drawable;
+    ecs_component_physics *component_physics;
     void *drawable;
 
     ecs_init();
@@ -94,9 +95,14 @@ int main(int argc, char *argv[]) {
     player = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_PLAYER);
     component_position = (ecs_component_position *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_POSITION);
     component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_DRAWABLE);
+    component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_PHYSICS);
 
     component_drawable->display = TRUE;
     component_drawable->drawable = drawable;
+    component_drawable->width = 32;
+    component_drawable->height = 56;
+    component_physics->hspeed = 1;
+    component_physics->vspeed = 1;
 
     while(!exit_program) {
         handle_input();
