@@ -26,7 +26,43 @@ word sprites_to_draw_count;
 
 gfx_tilemap *screen_tilemap;            // pointer to tilemap
 
+byte x_offset_clipping_left[256][4];
+byte x_offset_clipping_right[256][4];
+byte plane_offset_clipping_left[256][4];
+byte plane_offset_clipping_right[256][4];
+
 int frame_number = 0;
+
+void _init_clipping_tables() {
+    int i;
+    dword plane_vals_left = 0x03020100;
+    dword plane_vals_right = 0x03020100;
+    byte x_offsets_left[4] = {0, 0, 0, 0};
+    byte x_offsets_right[4] = {0, 0, 0, 0};
+
+    for(i = 0; i < 256; i++) {
+        plane_offset_clipping_left[i][0] = (byte) (plane_vals_left);
+        plane_offset_clipping_left[i][1] = (byte) (plane_vals_left >> 8);
+        plane_offset_clipping_left[i][2] = (byte) (plane_vals_left >> 16);
+        plane_offset_clipping_left[i][3] = (byte) (plane_vals_left >> 24);
+        plane_vals_left = (plane_vals_left >> 8 % 32) | (plane_vals_left << (32 - 8) % 32);  // circular rotate right 8 bits
+        plane_offset_clipping_right[i][0] = (byte) (plane_vals_right);
+        plane_offset_clipping_right[i][1] = (byte) (plane_vals_right >> 8);
+        plane_offset_clipping_right[i][2] = (byte) (plane_vals_right >> 16);
+        plane_offset_clipping_right[i][3] = (byte) (plane_vals_right >> 24);
+        plane_vals_right = (plane_vals_right << 8 % 32) | (plane_vals_right >> (32 - 8) % 32);  // circular rotate left 8 bits
+        x_offset_clipping_left[i][0] = x_offsets_left[0];
+        x_offset_clipping_left[i][1] = x_offsets_left[1];
+        x_offset_clipping_left[i][2] = x_offsets_left[2];
+        x_offset_clipping_left[i][3] = x_offsets_left[3];
+        x_offsets_left[3 - (i % 4)]++;
+        x_offset_clipping_right[i][0] = x_offsets_right[0];
+        x_offset_clipping_right[i][1] = x_offsets_right[1];
+        x_offset_clipping_right[i][2] = x_offsets_right[2];
+        x_offset_clipping_right[i][3] = x_offsets_right[3];
+        x_offsets_right[i % 4]++;
+    }
+}
 
 struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word height, bool is_planar, dword compiled_size) {
     struct gfx_buffer* empty_buffer;
@@ -398,19 +434,27 @@ void gfx_blit_clipped_planar_sprite(byte *vga_offset, byte *sprite_offset, byte 
         current_vga_offset += (PAGE_WIDTH >> 2) * abs(y_offset);
     }
 
-    if(x_offset < 0) {
-        x_min = abs(x_offset);
-        x_max = width;
-    } else {
-        x_min = 0;
-        x_max = width - x_offset;
-    }
+    // shift left
+    // x_min = x_offset;
+    // x_max = width;
+    // for(y = y_min; y < y_max; y++) {
+    //     for(x = x_min; x < x_max; x++) {
+    //         pixel = sprite_offset[(y * width) + x];
+    //         if(pixel) {
+    //             vga_offset[current_vga_offset + x - x_min] = pixel;
+    //         }
+    //     }
+    //     current_vga_offset += PAGE_WIDTH >> 2;
+    // }
 
+    // shift right
+    x_min = 0;
+    x_max = width - x_offset;
     for(y = y_min; y < y_max; y++) {
         for(x = x_min; x < x_max; x++) {
             pixel = sprite_offset[(y * width) + x];
             if(pixel) {
-                vga_offset[current_vga_offset + x + x_offset] = sprite_offset[(y * width) + x];
+                vga_offset[current_vga_offset + x + x_offset] = pixel;
             }
         }
         current_vga_offset += PAGE_WIDTH >> 2;
@@ -456,6 +500,8 @@ void gfx_init() {
     sprites_to_draw = malloc(sizeof(struct gfx_sprite_to_draw) * 256);
 
     screen_tilemap = _init_tilemap(255, 255);
+
+    _init_clipping_tables();
 }
 
 void gfx_shutdown() {
@@ -546,17 +592,56 @@ void _gfx_blit_dirty_tiles() {
     outpw(GC_INDEX + 1, 0x0ff);
 }
 
-void gfx_blit_sprites() {
-    byte plane, x_offset;
-    dword i, x, y, sprite_width, sprite_height, sprite_offset, dest_x, dest_y, initial_vga_offset, vga_offset, iter;
-    dword initial_offset = screen_state_current->current_render_page_offset;
-    byte *sprite_buffer;
+void _blit_sprite_onto_plane(gfx_sprite_to_draw *sprite, byte plane) {
     byte *VGA = (byte *) 0xA0000;
-    gfx_sprite_to_draw *cur_sprite;
-    dword plane_inits[] = {0x03020100, 0x00030201, 0x01000302, 0x02010003};
-    bool is_compiled;
-    dword *plane_offsets;
-    bool flip_horz;
+    byte *sprite_buffer = sprite->sprite_buffer->buffer;
+    byte sprite_width = sprite->width >> 2;
+    byte sprite_plane = 0;
+    dword initial_vga_offset, sprite_offset;
+    dword iter = sprite->flip_horz ? 0xFFFFFFFF : 1;
+    dword x_offset = plane - (sprite->dest_x % 4);
+    /* modulus again to account for overflow, can't do it on same line as above for some reason,
+        it's likely getting optimized out (at least on Watcom) */
+    x_offset = x_offset % 4;
+
+    initial_vga_offset = screen_state_current->current_render_page_offset
+        + (sprite->dest_y * (PAGE_WIDTH >> 2))
+        + ((sprite->dest_x + x_offset) >> 2);
+
+    if(sprite->sprite_buffer->is_compiled){
+        if(sprite->flip_horz) {
+            x_offset = ~(x_offset) & 0x03;
+            initial_vga_offset += sprite_width - 1;
+        }
+        sprite_plane = x_offset;
+        sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane];
+        gfx_blit_compiled_planar_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], iter);
+    } else {
+        // sprite_plane = plane_offset_clipping_left[abs(sprite->x_offset)][x_offset];
+        sprite_plane = plane_offset_clipping_right[abs(sprite->x_offset)][x_offset];
+        sprite_offset = (sprite->sprite_buffer->buffer_size >> 2) * sprite_plane;
+        gfx_blit_clipped_planar_sprite(
+            &VGA[initial_vga_offset],
+            &sprite_buffer[sprite_offset],
+            (byte) sprite_width,
+            sprite->height,
+            x_offset_clipping_right[abs(sprite->x_offset)][x_offset],
+            sprite->y_offset
+        );
+        // gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);
+    }
+}
+
+void gfx_blit_sprites() {
+    byte plane = 3;
+    word i;
+
+    // outp(SC_INDEX, MAP_MASK);
+    // outp(SC_DATA, 1 << plane);
+
+    // for(i = 0; i < sprites_to_draw_count; i++) {
+    //     _blit_sprite_onto_plane(&sprites_to_draw[i], plane);
+    // }
 
     for(plane = 0; plane < 4; plane++) {
         // select one plane at a time
@@ -564,42 +649,7 @@ void gfx_blit_sprites() {
         outp(SC_DATA, 1 << plane);
 
         for(i = 0; i < sprites_to_draw_count; i++) {
-            cur_sprite = &sprites_to_draw[i];
-            sprite_width = cur_sprite->width >> 2;
-            sprite_height = cur_sprite->height;
-            sprite_buffer = cur_sprite->sprite_buffer->buffer;
-            is_compiled = cur_sprite->sprite_buffer->is_compiled;
-            plane_offsets = cur_sprite->sprite_buffer->plane_offsets;
-            flip_horz = cur_sprite->flip_horz;
-            iter = flip_horz ? 0xFFFFFFFF : 1;
-
-            x_offset = plane - (cur_sprite->dest_x % 4);
-            /* modulus again to account for overflow, can't do it on same line as above for some reason,
-               it's likely getting optimized out (at least on Watcom) */
-            x_offset = x_offset % 4;
-
-            dest_x = (cur_sprite->dest_x + x_offset) >> 2;
-            dest_y = cur_sprite->dest_y;
-
-            initial_vga_offset = dest_y * (PAGE_WIDTH >> 2) + dest_x + initial_offset + (flip_horz ? sprite_width - 1 : 0);
-            if(is_compiled){
-                if(flip_horz) {
-                    x_offset = ~(x_offset) & 0x03;
-                }
-                sprite_offset = plane_offsets[x_offset];
-                gfx_blit_compiled_planar_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], iter);
-            } else {
-                sprite_offset = (cur_sprite->sprite_buffer->buffer_size >> 2) * (dword) x_offset;
-                gfx_blit_clipped_planar_sprite(
-                    &VGA[initial_vga_offset],
-                    &sprite_buffer[sprite_offset],
-                    (byte) sprite_width,
-                    (byte) sprite_height,
-                    cur_sprite->x_offset >> 2,
-                    cur_sprite->y_offset
-                );
-                // gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);
-            }
+            _blit_sprite_onto_plane(&sprites_to_draw[i], plane);
         }
     }
 }

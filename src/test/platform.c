@@ -135,11 +135,12 @@ int main(int argc, char *argv[]) {
     component_position->x = 0;
     component_position->y = 0;
     component_drawable->display = TRUE;
+    component_drawable->flip_horz = FALSE;
     component_drawable->drawable = drawable;
     component_drawable->width = 32;
     component_drawable->height = 56;
     component_physics->hspeed = 0;
-    component_physics->vspeed = -1;
+    component_physics->vspeed = 0;
 
     while(!exit_program) {
         handle_input();
