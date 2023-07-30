@@ -33,6 +33,11 @@ byte plane_offset_clipping_right[256][4];
 
 int frame_number = 0;
 
+/*
+ * NOTE: I am certain there is a better way to calculate these values
+ * on-the-fly, but this should suffice in the meantime until I can
+ * figure it out
+ */
 void _init_clipping_tables() {
     int i;
     dword plane_vals_left = 0x03020100;
@@ -421,7 +426,7 @@ void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word des
     }
 }
 
-void gfx_blit_clipped_planar_sprite(byte *vga_offset, byte *sprite_offset, byte width, byte height, int x_offset, int y_offset) {
+void gfx_blit_clipped_planar_sprite(byte *vga_offset, byte *sprite_offset, byte width, byte height, int x_offset, int y_offset, bool shift_left) {
     byte x, x_min = 0, x_max = width, y, y_min, y_max, pixel;
     dword current_vga_offset = 0;
 
@@ -434,30 +439,30 @@ void gfx_blit_clipped_planar_sprite(byte *vga_offset, byte *sprite_offset, byte 
         current_vga_offset += (PAGE_WIDTH >> 2) * abs(y_offset);
     }
 
-    // shift left
-    // x_min = x_offset;
-    // x_max = width;
-    // for(y = y_min; y < y_max; y++) {
-    //     for(x = x_min; x < x_max; x++) {
-    //         pixel = sprite_offset[(y * width) + x];
-    //         if(pixel) {
-    //             vga_offset[current_vga_offset + x - x_min] = pixel;
-    //         }
-    //     }
-    //     current_vga_offset += PAGE_WIDTH >> 2;
-    // }
-
-    // shift right
-    x_min = 0;
-    x_max = width - x_offset;
-    for(y = y_min; y < y_max; y++) {
-        for(x = x_min; x < x_max; x++) {
-            pixel = sprite_offset[(y * width) + x];
-            if(pixel) {
-                vga_offset[current_vga_offset + x + x_offset] = pixel;
+    if(shift_left) {
+        x_min = x_offset;
+        x_max = width;
+        for(y = y_min; y < y_max; y++) {
+            for(x = x_min; x < x_max; x++) {
+                pixel = sprite_offset[(y * width) + x];
+                if(pixel) {
+                    vga_offset[current_vga_offset + x - x_min] = pixel;
+                }
             }
+            current_vga_offset += PAGE_WIDTH >> 2;
         }
-        current_vga_offset += PAGE_WIDTH >> 2;
+    } else {
+        x_min = 0;
+        x_max = width - x_offset;
+        for(y = y_min; y < y_max; y++) {
+            for(x = x_min; x < x_max; x++) {
+                pixel = sprite_offset[(y * width) + x];
+                if(pixel) {
+                    vga_offset[current_vga_offset + x + x_offset] = pixel;
+                }
+            }
+            current_vga_offset += PAGE_WIDTH >> 2;
+        }
     }
 }
 
@@ -617,31 +622,24 @@ void _blit_sprite_onto_plane(gfx_sprite_to_draw *sprite, byte plane) {
         sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane];
         gfx_blit_compiled_planar_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], iter);
     } else {
-        // sprite_plane = plane_offset_clipping_left[abs(sprite->x_offset)][x_offset];
-        sprite_plane = plane_offset_clipping_right[abs(sprite->x_offset)][x_offset];
+        sprite_plane = sprite->x_offset < 0 ? plane_offset_clipping_left[abs(sprite->x_offset)][x_offset] : plane_offset_clipping_right[abs(sprite->x_offset)][x_offset];
         sprite_offset = (sprite->sprite_buffer->buffer_size >> 2) * sprite_plane;
         gfx_blit_clipped_planar_sprite(
             &VGA[initial_vga_offset],
             &sprite_buffer[sprite_offset],
             (byte) sprite_width,
             sprite->height,
-            x_offset_clipping_right[abs(sprite->x_offset)][x_offset],
-            sprite->y_offset
+            sprite->x_offset < 0 ? x_offset_clipping_left[abs(sprite->x_offset)][x_offset] : x_offset_clipping_right[abs(sprite->x_offset)][x_offset],
+            sprite->y_offset,
+            (sprite->x_offset < 0)
         );
         // gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);
     }
 }
 
 void gfx_blit_sprites() {
-    byte plane = 3;
+    byte plane = 0;
     word i;
-
-    // outp(SC_INDEX, MAP_MASK);
-    // outp(SC_DATA, 1 << plane);
-
-    // for(i = 0; i < sprites_to_draw_count; i++) {
-    //     _blit_sprite_onto_plane(&sprites_to_draw[i], plane);
-    // }
 
     for(plane = 0; plane < 4; plane++) {
         // select one plane at a time

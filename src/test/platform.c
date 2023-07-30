@@ -117,30 +117,45 @@ int main(int argc, char *argv[]) {
 
     drawable = load_sprite("jodi-spr.bmp", 32, 56, FALSE);
 
-    tileset_buffer = gfx_get_tileset_buffer();
-    tilemap_buffer = gfx_get_tilemap_buffer();
+    // tileset_buffer = gfx_get_tileset_buffer();
+    // tilemap_buffer = gfx_get_tilemap_buffer();
 
-    load_bmp_to_buffer("testtile.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
+    // load_bmp_to_buffer("testtile.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette);
     vga_set_palette(palette, 0, 255);
-    gfx_load_tileset();
+    // gfx_load_tileset();
 
-    read_bytes_from_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
-    gfx_reload_tilemap(0, 0);
+    // read_bytes_from_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
+    // gfx_reload_tilemap(0, 0);
 
     player = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_PLAYER);
     component_position = (ecs_component_position *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_POSITION);
     component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_DRAWABLE);
     component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_PHYSICS);
 
-    component_position->x = 0;
-    component_position->y = 0;
+    component_position->x = 48;
+    component_position->y = -56;
     component_drawable->display = TRUE;
     component_drawable->flip_horz = FALSE;
     component_drawable->drawable = drawable;
     component_drawable->width = 32;
     component_drawable->height = 56;
-    component_physics->hspeed = 0;
-    component_physics->vspeed = 0;
+    component_physics->hspeed = 1;
+    component_physics->vspeed = 1;
+
+    player = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_PLAYER);
+    component_position = (ecs_component_position *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_POSITION);
+    component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_DRAWABLE);
+    component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_PHYSICS);
+
+    component_position->x = 242;
+    component_position->y = -56;
+    component_drawable->display = TRUE;
+    component_drawable->flip_horz = FALSE;
+    component_drawable->drawable = drawable;
+    component_drawable->width = 32;
+    component_drawable->height = 56;
+    component_physics->hspeed = -1;
+    component_physics->vspeed = 1;
 
     while(!exit_program) {
         handle_input();
