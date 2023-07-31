@@ -102,7 +102,7 @@ void gfx_mirror_page(void);
 void gfx_render_all(void);
 void gfx_load_tileset(void);
 void gfx_reload_tilemap(byte x_offset, byte y_offset);
-void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height, int x_offset, int y_offset, bool flip_horz);
+void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int draw_x, int draw_y, bool flip_horz);
 void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 void gfx_load_linear_bitmap_to_planar_bitmap(byte *source_bitmap, byte *dest_bitmap, word width, word height, bool row_major);
 void gfx_set_scroll_offset(word x_offset, word y_offset);

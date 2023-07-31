@@ -57,10 +57,10 @@ int test_scroll(int testobj_max, byte test_mode){
     scratch_buffer = malloc(0xFFFF);
 
     load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette);
-    compiled_sized = spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
+    compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
 
     sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
-    spr_compile_planar_sprite(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
+    spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
 
     // gfx_load_linear_bitmap_to_planar_bitmap(scratch_buffer, sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
 
@@ -147,22 +147,22 @@ int test_scroll(int testobj_max, byte test_mode){
                 cur_testobj = &testobj_list[j];
                 cur_testobj->xpos += cur_testobj->hspeed;
                 cur_testobj->ypos += cur_testobj->vspeed;
-                if(cur_testobj->xpos > (320 - sprite_buffer->width) || cur_testobj->xpos < 0) {
-                    if(cur_testobj->xpos > (320 - sprite_buffer->width)) cur_testobj->xpos = (320 - sprite_buffer->width);
+                if(cur_testobj->xpos > (SCREEN_WIDTH - sprite_buffer->width) || cur_testobj->xpos < 0) {
+                    if(cur_testobj->xpos > (SCREEN_WIDTH - sprite_buffer->width)) cur_testobj->xpos = (SCREEN_WIDTH - sprite_buffer->width);
                     else if(cur_testobj->xpos < 0) cur_testobj->xpos = 0;
                     cur_testobj->hspeed = -(cur_testobj->hspeed);
                 }
 
-                if(cur_testobj->ypos > (240 - sprite_buffer->height) || cur_testobj->ypos < 0) {
-                    if(cur_testobj->ypos > (240 - sprite_buffer->height)) cur_testobj->ypos = (240 - sprite_buffer->height);
+                if(cur_testobj->ypos > (SCREEN_HEIGHT - sprite_buffer->height) || cur_testobj->ypos < 0) {
+                    if(cur_testobj->ypos > (SCREEN_HEIGHT - sprite_buffer->height)) cur_testobj->ypos = (SCREEN_HEIGHT - sprite_buffer->height);
                     else if(cur_testobj->ypos < 0) cur_testobj->ypos = 0;
                     cur_testobj->vspeed = -(cur_testobj->vspeed);
                 }
             }
             if(k++ % 30 == 0 && testobj_count < testobj_max){
                 cur_testobj = &testobj_list[testobj_count++];
-                cur_testobj->xpos = rand() % (320 - sprite_buffer->width);
-                cur_testobj->ypos = rand() % (240 - sprite_buffer->height);
+                cur_testobj->xpos = rand() % (SCREEN_WIDTH - sprite_buffer->width);
+                cur_testobj->ypos = rand() % (SCREEN_HEIGHT - sprite_buffer->height);
                 cur_testobj->hspeed = 1 + rand() % 5;
                 cur_testobj->vspeed = 1 + rand() % 5;
             }
@@ -172,7 +172,7 @@ int test_scroll(int testobj_max, byte test_mode){
         gfx_set_scroll_offset(pos_x, pos_y);
         for(j = 0; j < testobj_count; j++) {
             cur_testobj = &testobj_list[j];
-            gfx_draw_sprite_to_screen(sprite_buffer, 0, 0, (word) cur_testobj->xpos + (pos_x % TILE_WIDTH), (word) cur_testobj->ypos + (pos_y % TILE_HEIGHT), sprite_buffer->width, sprite_buffer->height, cur_testobj->hspeed > 0 ? FALSE : TRUE);
+            gfx_draw_bitmap_to_screen(sprite_buffer, (word) cur_testobj->xpos, (word) cur_testobj->ypos, FALSE);
         }
         gfx_render_all();
 

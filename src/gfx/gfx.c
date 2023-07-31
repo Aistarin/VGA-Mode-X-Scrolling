@@ -11,8 +11,8 @@ byte render_tile_height;                // rendering page height (in tiles)
 word render_tile_count;                 // total render tile count
 
 byte current_render_page = 0;           // current page displayed
-word view_scroll_x = 0;                 // horizontal scroll value
-word view_scroll_y = 0;                 // vertical scroll value
+int view_scroll_x = 0;                  // horizontal scroll value
+int view_scroll_y = 0;                  // vertical scroll value
 
 gfx_buffer *gfx_screen_buffer;          // main memory representation of current screen
 gfx_buffer *gfx_tileset_buffer;         // main memory representation of current tileset
@@ -322,8 +322,46 @@ void _gfx_draw_linear_bitmap_to_planar_bitmap(
     }
 }
 
-void gfx_draw_sprite_to_screen(gfx_buffer *bitmap, word source_x, word source_y, word dest_x, word dest_y, word width, word height, int x_offset, int y_offset, bool flip_horz) {
-    _gfx_add_sprite_to_draw(screen_state_current, bitmap, dest_x, dest_y, width, height, x_offset, y_offset, flip_horz);
+void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int dest_x, int dest_y, bool flip_horz) {
+    int draw_x = dest_x;
+    int draw_y = dest_y;
+    int x_offset = 0, y_offset = 0;
+
+    // do not draw bitmaps that go completely offscreen
+    if((draw_x + bitmap->width) < 0
+        || draw_x > SCREEN_WIDTH
+        || (draw_y + bitmap->height) < 0
+        || draw_y > SCREEN_HEIGHT) {
+        return;
+    }
+
+    if(draw_x < 0) {
+        x_offset = (0 - draw_x) * -1;
+        draw_x = 0;
+    } else if(draw_x + bitmap->width > 0 + SCREEN_WIDTH) {
+        x_offset = bitmap->width - (SCREEN_WIDTH - draw_x);
+        draw_x = 0 + SCREEN_WIDTH - bitmap->width;
+    }
+
+    if(draw_y < 0) {
+        y_offset = (0 - draw_y) * -1;
+        draw_y = 0;
+    } else if(draw_y + bitmap->height > 0 + SCREEN_HEIGHT) {
+        y_offset = bitmap->height - (SCREEN_HEIGHT - draw_y);
+        draw_y = 0 + SCREEN_HEIGHT - bitmap->height;
+    }
+
+    _gfx_add_sprite_to_draw(
+        screen_state_current,
+        bitmap,
+        (word) draw_x + (view_scroll_x % TILE_WIDTH),
+        (word) draw_y + (view_scroll_y % TILE_HEIGHT),
+        bitmap->width,
+        bitmap->height,
+        x_offset,
+        y_offset,
+        flip_horz
+    );
 }
 
 void gfx_set_tile_states_for_sprites(){
@@ -621,26 +659,21 @@ void _blit_sprite_onto_plane(gfx_sprite_to_draw *sprite, byte plane) {
         + ((sprite->dest_x + x_offset) >> 2);
 
     if(sprite->sprite_buffer->buffer_flags & GFX_BUFFER_FLAG_COMPILED){
-        if(sprite->flip_horz) {
-            x_offset = ~(x_offset) & 0x03;
-            initial_vga_offset += sprite_width - 1;
-        }
-        sprite_plane = x_offset;
-        sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane];
-        gfx_blit_compiled_planar_sprite_scheme_2(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset + ((dword) sprite_width * (dword) sprite->height)], &sprite_buffer[sprite_offset]);
-    } else {
         sprite_plane = sprite->x_offset < 0 ? plane_offset_clipping_left[abs(sprite->x_offset)][x_offset] : plane_offset_clipping_right[abs(sprite->x_offset)][x_offset];
-        sprite_offset = (sprite->sprite_buffer->buffer_size >> 2) * sprite_plane;
-        gfx_blit_clipped_planar_sprite(
-            &VGA[initial_vga_offset],
-            &sprite_buffer[sprite_offset],
-            (byte) sprite_width,
-            sprite->height,
-            sprite->x_offset < 0 ? x_offset_clipping_left[abs(sprite->x_offset)][x_offset] : x_offset_clipping_right[abs(sprite->x_offset)][x_offset],
-            sprite->y_offset,
-            (sprite->x_offset < 0)
-        );
-        // gfx_blit_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], (byte) sprite_width, (byte) sprite_height);
+        sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane];
+        if(sprite->x_offset != 0 || sprite->y_offset != 0) {
+            gfx_blit_clipped_planar_sprite(
+                &VGA[initial_vga_offset],
+                &sprite_buffer[sprite_offset],
+                (byte) sprite_width,
+                sprite->height,
+                sprite->x_offset < 0 ? x_offset_clipping_left[abs(sprite->x_offset)][x_offset] : x_offset_clipping_right[abs(sprite->x_offset)][x_offset],
+                sprite->y_offset,
+                (sprite->x_offset < 0)
+            );
+        } else {
+            gfx_blit_compiled_planar_sprite_scheme_2(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset + ((dword) sprite_width * (dword) sprite->height)], &sprite_buffer[sprite_offset]);
+        }
     }
 }
 
