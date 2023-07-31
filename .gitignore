@@ -4,3 +4,4 @@ dos32a.exe
 dos4gw.exe
 *.err
 .env
+/history/*

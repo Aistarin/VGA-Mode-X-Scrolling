@@ -26,9 +26,9 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
     load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette);
 
     if(compiled) {
-        compiled_sized = spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
+        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
-        spr_compile_planar_sprite(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
+        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
     } else {
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, 0);
         gfx_load_linear_bitmap_to_planar_bitmap(scratch_buffer, sprite_buffer->buffer, sprite_width, sprite_height, TRUE);
@@ -43,9 +43,8 @@ void draw_entity(ecs_entity *entity) {
     int draw_x = component_position->x + component_drawable->x_offset;
     int draw_y = component_position->y + component_drawable->y_offset;
     int x_offset = 0, y_offset = 0;
-    // byte x_min = 0, x_max = component_drawable->width, y_min = 0, y_max = component_drawable->height;
 
-    // since no clipping is currently implemented, do not draw sprites that go beyond boundaries
+    // do not draw sprites that go beyond boundaries
     if((draw_x + component_drawable->width) < view_pos_x
         || draw_x > view_pos_x + SCREEN_WIDTH
         || (draw_y + component_drawable->height) < view_pos_y
@@ -115,7 +114,7 @@ int main(int argc, char *argv[]) {
 
     ecs_set_drawing_function(draw_entity);
 
-    drawable = load_sprite("jodi-spr.bmp", 32, 56, FALSE);
+    drawable = load_sprite("jodi-spr.bmp", 32, 56, TRUE);
 
     // tileset_buffer = gfx_get_tileset_buffer();
     // tilemap_buffer = gfx_get_tilemap_buffer();
@@ -132,8 +131,8 @@ int main(int argc, char *argv[]) {
     component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_DRAWABLE);
     component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_PHYSICS);
 
-    component_position->x = 48;
-    component_position->y = -56;
+    component_position->x = 0;
+    component_position->y = 0;
     component_drawable->display = TRUE;
     component_drawable->flip_horz = FALSE;
     component_drawable->drawable = drawable;
@@ -147,8 +146,8 @@ int main(int argc, char *argv[]) {
     component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_DRAWABLE);
     component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_PHYSICS);
 
-    component_position->x = 242;
-    component_position->y = -56;
+    component_position->x = 288;
+    component_position->y = 0;
     component_drawable->display = TRUE;
     component_drawable->flip_horz = FALSE;
     component_drawable->drawable = drawable;

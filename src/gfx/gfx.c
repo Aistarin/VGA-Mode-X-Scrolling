@@ -76,10 +76,17 @@ struct gfx_buffer* gfx_create_empty_buffer(int color_depth, word width, word hei
     empty_buffer = malloc(sizeof(struct gfx_buffer) + (sizeof(byte) * buffer_size));
 
     empty_buffer->buffer_size = buffer_size;
-    empty_buffer->is_planar = is_planar;
-    empty_buffer->is_compiled = compiled_size ? TRUE : FALSE;
+    empty_buffer->buffer_flags = 0;
     empty_buffer->width = width;
     empty_buffer->height = height;
+
+    if(is_planar) {
+        empty_buffer->buffer_flags |= GFX_BUFFER_FLAG_PLANAR;
+    }
+
+    if(compiled_size > 0) {
+        empty_buffer->buffer_flags |= GFX_BUFFER_FLAG_COMPILED;
+    }
 
     /* bitmap buffer is memory immediately after main struct */
     empty_buffer->buffer = (byte *) empty_buffer + sizeof(struct gfx_buffer);
@@ -613,14 +620,14 @@ void _blit_sprite_onto_plane(gfx_sprite_to_draw *sprite, byte plane) {
         + (sprite->dest_y * (PAGE_WIDTH >> 2))
         + ((sprite->dest_x + x_offset) >> 2);
 
-    if(sprite->sprite_buffer->is_compiled){
+    if(sprite->sprite_buffer->buffer_flags & GFX_BUFFER_FLAG_COMPILED){
         if(sprite->flip_horz) {
             x_offset = ~(x_offset) & 0x03;
             initial_vga_offset += sprite_width - 1;
         }
         sprite_plane = x_offset;
         sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane];
-        gfx_blit_compiled_planar_sprite(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset], iter);
+        gfx_blit_compiled_planar_sprite_scheme_2(&VGA[initial_vga_offset], &sprite_buffer[sprite_offset + ((dword) sprite_width * (dword) sprite->height)], &sprite_buffer[sprite_offset]);
     } else {
         sprite_plane = sprite->x_offset < 0 ? plane_offset_clipping_left[abs(sprite->x_offset)][x_offset] : plane_offset_clipping_right[abs(sprite->x_offset)][x_offset];
         sprite_offset = (sprite->sprite_buffer->buffer_size >> 2) * sprite_plane;

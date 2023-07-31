@@ -30,17 +30,21 @@ enum gfx_sprite_commands {
     GFX_SPRITE_CMD_END              = 0x05  // column has come to an end
 };
 
-int gfx_color_depth_sizes[] = {1, 2, 2, 3, 4};
+enum gfx_buffer_flags {
+    GFX_BUFFER_FLAG_PLANAR          = 0x01, // buffer is in planar format
+    GFX_BUFFER_FLAG_COMPILED        = 0x02, // buffer contains compiled instructions
+    GFX_BUFFER_FLAG_CLIPPING        = 0x04, // buffer supports clipping/has a clipping fallback
+    GFX_BUFFER_FLAG_ROW_MAJOR       = 0x08  // planar data is stored in row-major order
+};
 
 typedef struct gfx_buffer {
     int color_depth;                        // color depth of image
     dword buffer_size;                      // total size of buffer (in bytes)
-    bool is_planar;                         // flag to determine whether or not buffer is stored in planar format
-    bool is_compiled;                       // flag to determine whether or not buffer contains compiled sprite data
+    byte buffer_flags;                      // bit flags that describe the buffer data
     word width;                             // buffer width (in pixels)
     word height;                            // buffer height (in pixels)
     dword plane_offsets[4];                 // plane offsets
-    byte *buffer;                           // array of bytes that holds raw bitmap data
+    byte *buffer;                           // array of bytes that holds raw bitmap data and/or compiled instructions
 } gfx_buffer;
 
 typedef struct gfx_planar_sprite {
@@ -107,6 +111,7 @@ gfx_tilemap* gfx_get_tilemap_buffer(void);
 extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte sprite_height);
 extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
 extern void gfx_blit_8_x_8_tile(byte *vga_offset, byte *tile_offset);
-extern void gfx_blit_compiled_planar_sprite(byte *vga_offset, byte *sprite_offset, dword iter);
+extern void gfx_blit_compiled_planar_sprite_scheme_1(byte *vga_offset, byte *sprite_offset, dword iter);
+extern void gfx_blit_compiled_planar_sprite_scheme_2(byte *vga_offset, byte *sprite_offset, byte *sprite_data_offset);
 
 #endif

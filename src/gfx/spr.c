@@ -17,7 +17,7 @@ byte plane_select_opcodes[] = {
     0x08, 
 };
 
-dword spr_compile_planar_sprite(byte *sprite_buffer, word width, word height, byte *output_buffer, dword *plane_offsets) {
+dword spr_compile_planar_sprite_scheme_1(byte *sprite_buffer, word width, word height, byte *output_buffer, dword *plane_offsets) {
     byte plane, pixel;
     word x, y;
     dword offset = 0, output_pos = 0;
@@ -67,4 +67,83 @@ dword spr_compile_planar_sprite(byte *sprite_buffer, word width, word height, by
     }
 
     return output_pos;
+}
+
+dword spr_compile_planar_sprite_scheme_2(byte *sprite_buffer, word width, word height, byte *output_buffer, dword *plane_offsets) {
+    byte plane, pixel;
+    word x, y;
+    dword src_offset, dest_offset, buffer_length = 0, sprite_offset = 0;
+    dword dest_row_offset = (PAGE_WIDTH - width) >> 2; // divide by 4
+    bool calculate_only = output_buffer == NULL;
+
+    for(plane = 0; plane < 4; plane++){
+        if(!calculate_only) {
+            plane_offsets[plane] = buffer_length;
+            sprite_offset = buffer_length;
+        }
+        buffer_length += (width * height) >> 2;
+        src_offset = 0;
+        dest_offset = 0;
+        for(y = 0; y < height; y++)
+        {
+            for(x = plane; x < width; x += 4) {
+                pixel = sprite_buffer[y * width + x];
+                if(!calculate_only) {
+                    output_buffer[sprite_offset++] = pixel;
+                }
+                if(pixel != 0) {
+                    if(src_offset > 0) {
+                        if(!calculate_only) {
+                            output_buffer[buffer_length++] = src_offset > 127 ? 0x81 : 0x83;
+                            output_buffer[buffer_length++] = 0xc6;
+                            output_buffer[buffer_length++] = (byte) src_offset;
+                            if(src_offset > 127) {
+                                output_buffer[buffer_length++] = (byte) (src_offset >> 8);
+                                output_buffer[buffer_length++] = (byte) (src_offset >> 16);
+                                output_buffer[buffer_length++] = (byte) (src_offset >> 24);
+                            }
+                            // printf("add esi, %d\n", src_offset);
+                        } else {
+                            buffer_length += src_offset > 127 ? 6 : 3;
+                        }
+                        src_offset = 0;
+                    }
+                    if(dest_offset > 0) {
+                        if(!calculate_only) {
+                            output_buffer[buffer_length++] = dest_offset > 127 ? 0x81 : 0x83;
+                            output_buffer[buffer_length++] = 0xc7;
+                            output_buffer[buffer_length++] = (byte) dest_offset;
+                            if(dest_offset > 127) {
+                                output_buffer[buffer_length++] = (byte) (dest_offset >> 8);
+                                output_buffer[buffer_length++] = (byte) (dest_offset >> 16);
+                                output_buffer[buffer_length++] = (byte) (dest_offset >> 24);
+                            }
+                            // printf("add edi, %d\n", dest_offset);
+                        } else {
+                            buffer_length += dest_offset > 127 ? 6 : 3;
+                        }
+                        dest_offset = 0;
+                    }
+                    if(!calculate_only) {
+                        output_buffer[buffer_length++] = 0xa4;
+                        // printf("movsb\n");
+                    } else {
+                        buffer_length++;
+                    }
+                } else {
+                    src_offset++;
+                    dest_offset++;
+                }
+            }
+            dest_offset += dest_row_offset;
+        }
+        if(!calculate_only) {
+            output_buffer[buffer_length++] = 0xc3;
+            // printf("ret\n");
+        } else {
+            buffer_length++;
+        }
+    }
+
+    return buffer_length;
 }

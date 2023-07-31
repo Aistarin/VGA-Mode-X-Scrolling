@@ -192,13 +192,27 @@ _gfx_blit_8_x_8_tile: FUNCTION
     popa
 ENDFUNCTION
 
-GLOBAL _gfx_blit_compiled_planar_sprite
-_gfx_blit_compiled_planar_sprite: FUNCTION
+GLOBAL _gfx_blit_compiled_planar_sprite_scheme_1
+_gfx_blit_compiled_planar_sprite_scheme_1: FUNCTION
     %arg vga_offset:dword, sprite_offset:dword, iter:dword
     pusha
     cld
 
     mov ebx, [iter]
+    mov edi, dword [vga_offset]         ;; set destination to where sprite will be drawn in VRAM
+
+    call dword [sprite_offset]
+
+    popa
+ENDFUNCTION
+
+GLOBAL _gfx_blit_compiled_planar_sprite_scheme_2
+_gfx_blit_compiled_planar_sprite_scheme_2: FUNCTION
+    %arg vga_offset:dword, sprite_offset:dword, sprite_data_offset:dword
+    pusha
+    cld
+
+    mov esi, [sprite_data_offset]
     mov edi, dword [vga_offset]         ;; set destination to where sprite will be drawn in VRAM
 
     call dword [sprite_offset]
