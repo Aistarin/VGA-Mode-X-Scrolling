@@ -69,7 +69,7 @@ dword spr_compile_planar_sprite_scheme_1(byte *sprite_buffer, word width, word h
     return output_pos;
 }
 
-dword spr_compile_planar_sprite_scheme_2(byte *sprite_buffer, word width, word height, byte *output_buffer, dword *plane_offsets) {
+dword spr_compile_planar_sprite_scheme_2(byte *sprite_buffer, word width, word height, byte *output_buffer, dword *plane_offsets, byte palette_offset) {
     byte plane, pixel;
     word x, y;
     dword src_offset, dest_offset, buffer_length = 0, sprite_offset = 0;
@@ -89,7 +89,7 @@ dword spr_compile_planar_sprite_scheme_2(byte *sprite_buffer, word width, word h
             for(x = plane; x < width; x += 4) {
                 pixel = sprite_buffer[y * width + x];
                 if(!calculate_only) {
-                    output_buffer[sprite_offset++] = pixel;
+                    output_buffer[sprite_offset++] = pixel > 0 ? pixel + palette_offset : 0;
                 }
                 if(pixel != 0) {
                     if(src_offset > 0) {

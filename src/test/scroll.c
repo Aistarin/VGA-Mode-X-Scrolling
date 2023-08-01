@@ -56,33 +56,28 @@ int test_scroll(int testobj_max, byte test_mode){
 
     scratch_buffer = malloc(0xFFFF);
 
-    load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette);
-    compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL);
+    tileset_buffer = gfx_get_tileset_buffer();
 
+    if(test_mode == 3) {
+        load_bmp_to_buffer("jodi.bmp", scratch_buffer, tileset_buffer->width, tileset_buffer->height, palette, 0);
+        vga_set_palette(palette, 0, 255);
+    } else if (test_mode == 2) {
+        render_pattern_to_buffer_3(tileset_buffer->buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
+    } else if (test_mode == 1) {
+        render_pattern_to_buffer_2(tileset_buffer->buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
+    } else if (test_mode == 0) {
+        render_pattern_to_buffer_1(tileset_buffer->buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
+    }
+
+    load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette, 0);
+    compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, 0);
     sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
-    spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets);
-
-    // gfx_load_linear_bitmap_to_planar_bitmap(scratch_buffer, sprite_buffer->buffer, sprite_buffer->width, sprite_buffer->height);
+    spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets, 0);
 
     palette[0] = 0;
     palette[1] = 0;
     palette[2] = 0;
     vga_set_palette(palette, 0, 15);
-
-    tileset_buffer = gfx_get_tileset_buffer();
-
-    if(test_mode == 3) {
-        load_bmp_to_buffer("jodi.bmp", scratch_buffer, tileset_buffer->width, tileset_buffer->height, palette);
-        vga_set_palette(palette, 0, 255);
-    } else if (test_mode == 2) {
-        render_pattern_to_buffer_3(scratch_buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
-    } else if (test_mode == 1) {
-        render_pattern_to_buffer_2(scratch_buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
-    } else if (test_mode == 0) {
-        render_pattern_to_buffer_1(scratch_buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
-    }
-
-    memcpy(tileset_buffer->buffer, scratch_buffer, tileset_buffer->buffer_size);
 
     gfx_load_tileset();
 
@@ -169,12 +164,12 @@ int test_scroll(int testobj_max, byte test_mode){
         }
 
         /* scroll screen before drawing sprites */
-        gfx_set_scroll_offset(pos_x, pos_y);
         for(j = 0; j < testobj_count; j++) {
             cur_testobj = &testobj_list[j];
             gfx_draw_bitmap_to_screen(sprite_buffer, (word) cur_testobj->xpos, (word) cur_testobj->ypos, FALSE);
         }
         gfx_render_all();
+        gfx_set_scroll_offset(pos_x, pos_y);
 
         timer_end();
 

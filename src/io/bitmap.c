@@ -10,7 +10,7 @@ void _fskip(FILE *fp, int num_bytes)
       fgetc(fp);
 }
 
-void load_bmp_to_buffer(char *file, byte *screen_buffer, word buffer_width, word buffer_height, byte *palette)
+void load_bmp_to_buffer(char *file, byte *screen_buffer, word buffer_width, word buffer_height, byte *palette, byte palette_offset)
 {
     FILE *fp;
     dword index, x;
@@ -45,7 +45,7 @@ void load_bmp_to_buffer(char *file, byte *screen_buffer, word buffer_width, word
     if (num_colors==0) num_colors=256;
 
     /* read the palette information */
-    for(index=0;index<num_colors;index++)
+    for(index = palette_offset; index < palette_offset + num_colors; index++)
     {
         palette[(int)(index*3+2)] = fgetc(fp) >> 2;
         palette[(int)(index*3+1)] = fgetc(fp) >> 2;
