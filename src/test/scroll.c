@@ -25,6 +25,7 @@ gfx_tilemap *tilemap_buffer;
 
 int speed_multiplier = 0;
 int timer = 0;
+int max_entities = 0;
 void *drawable;
 
 void* load_sprite(char *filename, word sprite_width, word sprite_height, bool compiled, byte palette_offset) {
@@ -117,7 +118,7 @@ void handle_input() {
 }
 
 void handle_logic() {
-    if(timer++ % 30 == 0 && ecs_get_entity_count() < ENTITY_MAX){
+    if(timer++ % 30 == 0 && ecs_get_entity_count() < max_entities){
         create_entity(drawable);
     }
     ecs_handle_systems();
@@ -130,7 +131,7 @@ void handle_graphics() {
     gfx_render_all();
 }
 
-int test_scroll(int testobj_max, byte test_mode){
+int test_scroll(byte test_mode){
     int x, y, i;
     word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
     word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
@@ -213,8 +214,12 @@ int main(int argc, char *argv[]) {
     int num = atoi(a);
     int test_mode = atoi(b);
 
-    if(argc >= 2)
-        return test_scroll(num, test_mode);
-    else
-        return test_scroll(256, FALSE);
+    if(argc >= 2) {
+        max_entities = num;
+        return test_scroll(test_mode);
+    }
+    else {
+        max_entities = ENTITY_MAX;
+        return test_scroll(0);
+    }
 }
