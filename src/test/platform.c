@@ -57,13 +57,14 @@ void handle_input() {
 }
 
 void handle_logic() {
-    ecs_handle();
+    ecs_handle_systems();
 }
 
 void handle_graphics() {
     /* scroll screen before rendering all */
-    gfx_render_all();
     gfx_set_scroll_offset(view_pos_x++, view_pos_y);
+    ecs_handle_graphics();
+    gfx_render_all();
 }
 
 int main(int argc, char *argv[]) {

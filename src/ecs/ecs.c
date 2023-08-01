@@ -147,12 +147,31 @@ void _handle_physics_components() {
         component_physics->vspeed -= component_physics->gravity;
         component_position->x += component_physics->hspeed;
         component_position->y += component_physics->vspeed;
+
+        if(component_position->x > (320 - 32) || component_position->x < 0) {
+            if(component_position->x > (320 - 32)) component_position->x = (320 - 32);
+            else if(component_position->x < 0) component_position->x = 0;
+            component_physics->hspeed = -(component_physics->hspeed);
+        }
+
+        if(component_position->y > (240 - 56) || component_position->y < 0) {
+            if(component_position->y > (240 - 56)) component_position->y = (240 - 56);
+            else if(component_position->y < 0) component_position->y = 0;
+            component_physics->vspeed = -(component_physics->vspeed);
+        }
     }
 }
 
-void ecs_handle(void) {
+void ecs_handle_systems(void) {
     _handle_physics_components();
+}
+
+void ecs_handle_graphics(void) {
     _handle_drawable_components();
+}
+
+int ecs_get_entity_count(void) {
+    return entity_list->entity_count;
 }
 
 void ecs_init(void) {

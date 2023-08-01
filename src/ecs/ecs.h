@@ -70,8 +70,11 @@ typedef struct ecs_component_physics {
 } ecs_component_physics;
 
 void ecs_init(void);
-void ecs_handle(void);
+void ecs_handle_systems(void);
+void ecs_handle_graphics(void);
 void ecs_shutdown(void);
+
+int ecs_get_entity_count(void);
 
 void ecs_set_drawing_function(void (*func)(ecs_entity*));
 ecs_entity* ecs_instantiate_empty_entity(byte entity_type);

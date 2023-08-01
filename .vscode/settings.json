@@ -12,6 +12,7 @@
         "common.h": "c",
         "bitmap.h": "c",
         "pattern.h": "c",
-        "ecs.h": "c"
+        "ecs.h": "c",
+        "keyboard.h": "c"
     }
 }

@@ -1,23 +1,78 @@
 #include "src/common.h"
-#include "src/gfx/vga.h"
+#include "src/ecs/ecs.h"
 #include "src/gfx/gfx.h"
 #include "src/gfx/spr.h"
-#include "src/io/timer.h"
-#include "src/io/keyboard.h"
+#include "src/gfx/vga.h"
 #include "src/io/bitmap.h"
+#include "src/io/file.h"
+#include "src/io/keyboard.h"
+#include "src/io/timer.h"
 #include "src/test/pattern.h"
+#include <conio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct testobj {
-    int hspeed;
-    int vspeed;
-    int xpos;
-    int ypos;
-} testobj;
+bool exit_program = FALSE;
+byte palette[256*3];
+byte scratch_buffer[0xFFFF];
+
+int view_pos_x = 0;
+int view_pos_y = 0;
+
+gfx_buffer *tileset_buffer;
+gfx_tilemap *tilemap_buffer;
+
+int speed_multiplier = 0;
+int timer = 0;
+void *drawable;
+
+void* load_sprite(char *filename, word sprite_width, word sprite_height, bool compiled, byte palette_offset) {
+    gfx_buffer *sprite_buffer;
+    dword compiled_sized = 0;
+
+    load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette, palette_offset);
+
+    if(compiled) {
+        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset);
+        sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
+        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset);
+    } else {
+        sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, 0);
+        gfx_load_linear_bitmap_to_planar_bitmap(scratch_buffer, sprite_buffer->buffer, sprite_width, sprite_height, TRUE);
+    }
+
+    return sprite_buffer;
+}
+
+void draw_entity(ecs_entity *entity) {
+    ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
+    ecs_component_drawable *component_drawable = entity->components[ECS_COMPONENT_TYPE_DRAWABLE];
+    int draw_x = component_position->x + component_drawable->x_offset;
+    int draw_y = component_position->y + component_drawable->y_offset;
+
+    gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE);
+}
+
+ecs_entity* create_entity(gfx_buffer *drawable) {
+    ecs_entity *entity = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_PLAYER);
+    ecs_component_position *component_position = (ecs_component_position *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_POSITION);
+    ecs_component_drawable *component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_DRAWABLE);
+    ecs_component_physics *component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_PHYSICS);
+
+    component_position->x = 128;
+    component_position->y = 128;
+    component_drawable->display = TRUE;
+    component_drawable->drawable = drawable;
+    component_drawable->width = drawable->width;
+    component_drawable->height = drawable->height;
+    component_physics->hspeed = 1 + rand() % 5;
+    component_physics->vspeed = 1 + rand() % 5;
+    return entity;
+}
 
 int shutdown_handler(void) {
+    ecs_shutdown();
     timer_shutdown();
     keyboard_shutdown();
     gfx_shutdown();
@@ -26,40 +81,70 @@ int shutdown_handler(void) {
 }
 
 int init_handler(void) {
+    ecs_init();
     timer_init();
     keyboard_init();
     gfx_init();
 
+    ecs_set_drawing_function(draw_entity);
+
     return 0;
 }
 
+void handle_input() {
+    speed_multiplier = !is_pressing_lshift();
+
+    if(is_pressing_w()) {
+        view_pos_y -= speed_multiplier ? 1 : TILE_HEIGHT;
+    }
+    if(is_pressing_s()) {
+        view_pos_y += speed_multiplier ? 1 : TILE_HEIGHT;
+    }
+    if(is_pressing_a()) {
+        view_pos_x -= speed_multiplier ? 1 : TILE_WIDTH;
+    }
+    if(is_pressing_d()) {
+        view_pos_x += speed_multiplier ? 1 : TILE_WIDTH;
+    }
+    if(is_pressing_escape()) {
+        exit_program = TRUE;
+    }
+
+    if(view_pos_x < 0)
+        view_pos_x = 0;
+    if(view_pos_y < 0)
+        view_pos_y = 0;
+}
+
+void handle_logic() {
+    if(timer++ % 30 == 0 && ecs_get_entity_count() < ENTITY_MAX){
+        create_entity(drawable);
+    }
+    ecs_handle_systems();
+}
+
+void handle_graphics() {
+    /* scroll screen before rendering all */
+    gfx_set_scroll_offset(view_pos_x, view_pos_y);
+    ecs_handle_graphics();
+    gfx_render_all();
+}
+
 int test_scroll(int testobj_max, byte test_mode){
-    int i, j, k, offset, x, y, tile_offset_x = 0, tile_offset_y = 0, pos_x = 0, pos_y = 0;
-    gfx_buffer *tileset_buffer;
-    gfx_buffer *sprite_buffer;
-    byte *scratch_buffer;
-    gfx_tilemap *tilemap_buffer;
-    byte palette[256*3];
-    char ch;
-    int testobj_count = 0;
-    dword compiled_sized = 0;
-    bool exit_program = FALSE;
-    word sprite_width=32, sprite_height=56;
+    int x, y, i;
     word render_tile_width = PAGE_WIDTH / TILE_WIDTH;
     word render_tile_height = PAGE_HEIGHT / TILE_HEIGHT;
-    int speed_multiplier = 0;
 
-    testobj *testobj_list = malloc(sizeof(testobj) * testobj_max);
-    testobj *cur_testobj;
+    drawable = load_sprite("jodi-spr.bmp", 32, 56, TRUE, 0);
 
     init_handler();
 
-    scratch_buffer = malloc(0xFFFF);
-
     tileset_buffer = gfx_get_tileset_buffer();
+    tilemap_buffer = gfx_get_tilemap_buffer();
 
+    /* load or generate tileset images */
     if(test_mode == 3) {
-        load_bmp_to_buffer("jodi.bmp", scratch_buffer, tileset_buffer->width, tileset_buffer->height, palette, 0);
+        load_bmp_to_buffer("jodi.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette, 0);
         vga_set_palette(palette, 0, 255);
     } else if (test_mode == 2) {
         render_pattern_to_buffer_3(tileset_buffer->buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
@@ -68,21 +153,9 @@ int test_scroll(int testobj_max, byte test_mode){
     } else if (test_mode == 0) {
         render_pattern_to_buffer_1(tileset_buffer->buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
     }
-
-    load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette, 0);
-    compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, 0);
-    sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
-    spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_buffer->width, sprite_buffer->height, sprite_buffer->buffer, sprite_buffer->plane_offsets, 0);
-
-    palette[0] = 0;
-    palette[1] = 0;
-    palette[2] = 0;
-    vga_set_palette(palette, 0, 15);
-
     gfx_load_tileset();
 
-    tilemap_buffer = gfx_get_tilemap_buffer();
-
+    /* build test tilemap */
     for(i = 0; i < 256; i++){
         x = i % 16;
         y = i / 16;
@@ -104,72 +177,21 @@ int test_scroll(int testobj_max, byte test_mode){
         gfx_set_tile(tilemap_buffer->buffer[y * tilemap_buffer->horz_tiles + x], x, y);
     }
 
-    pos_x = 0;
-    pos_y = 0;
-    tile_offset_x = 0;
-    tile_offset_y = 0;
-    i = 0;
+    palette[0] = 0;
+    palette[1] = 0;
+    palette[2] = 0;
+    vga_set_palette(palette, 0, 15);
+
     timer_set_interval(16);
     while (1) {
         timer_start();
 
         while(timer_step()) {
-
-            speed_multiplier = !is_pressing_lshift();
-
-            if(is_pressing_w()) {
-                pos_y -= speed_multiplier ? 1 : TILE_HEIGHT;
-            }
-            if(is_pressing_s()) {
-                pos_y += speed_multiplier ? 1 : TILE_HEIGHT;
-            }
-            if(is_pressing_a()) {
-                pos_x -= speed_multiplier ? 1 : TILE_WIDTH;
-            }
-            if(is_pressing_d()) {
-                pos_x += speed_multiplier ? 1 : TILE_WIDTH;
-            }
-            if(is_pressing_escape()) {
-                exit_program = TRUE;
-            }
-
-            if(pos_y < 0)
-                pos_y = 0;
-            if(pos_x < 0)
-                pos_x = 0;
-
-            for(j = 0; j < testobj_count; j++) {
-                cur_testobj = &testobj_list[j];
-                cur_testobj->xpos += cur_testobj->hspeed;
-                cur_testobj->ypos += cur_testobj->vspeed;
-                if(cur_testobj->xpos > (SCREEN_WIDTH - sprite_buffer->width) || cur_testobj->xpos < 0) {
-                    if(cur_testobj->xpos > (SCREEN_WIDTH - sprite_buffer->width)) cur_testobj->xpos = (SCREEN_WIDTH - sprite_buffer->width);
-                    else if(cur_testobj->xpos < 0) cur_testobj->xpos = 0;
-                    cur_testobj->hspeed = -(cur_testobj->hspeed);
-                }
-
-                if(cur_testobj->ypos > (SCREEN_HEIGHT - sprite_buffer->height) || cur_testobj->ypos < 0) {
-                    if(cur_testobj->ypos > (SCREEN_HEIGHT - sprite_buffer->height)) cur_testobj->ypos = (SCREEN_HEIGHT - sprite_buffer->height);
-                    else if(cur_testobj->ypos < 0) cur_testobj->ypos = 0;
-                    cur_testobj->vspeed = -(cur_testobj->vspeed);
-                }
-            }
-            if(k++ % 30 == 0 && testobj_count < testobj_max){
-                cur_testobj = &testobj_list[testobj_count++];
-                cur_testobj->xpos = rand() % (SCREEN_WIDTH - sprite_buffer->width);
-                cur_testobj->ypos = rand() % (SCREEN_HEIGHT - sprite_buffer->height);
-                cur_testobj->hspeed = 1 + rand() % 5;
-                cur_testobj->vspeed = 1 + rand() % 5;
-            }
+            handle_input();
+            handle_logic();
         }
 
-        /* scroll screen before drawing sprites */
-        for(j = 0; j < testobj_count; j++) {
-            cur_testobj = &testobj_list[j];
-            gfx_draw_bitmap_to_screen(sprite_buffer, (word) cur_testobj->xpos, (word) cur_testobj->ypos, FALSE);
-        }
-        gfx_render_all();
-        gfx_set_scroll_offset(pos_x, pos_y);
+        handle_graphics();
 
         timer_end();
 
@@ -180,7 +202,7 @@ int test_scroll(int testobj_max, byte test_mode){
 
     shutdown_handler();
 
-    printf("total objects rendered: %d\n", testobj_count);
+    printf("total objects rendered: %d\n", ecs_get_entity_count());
 
     return 0;
 }
