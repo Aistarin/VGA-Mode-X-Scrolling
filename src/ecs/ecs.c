@@ -177,8 +177,8 @@ int ecs_get_entity_count(void) {
 void ecs_init(void) {
     entity_list = _init_entity_list();
     component_position_list = _init_component_list(ECS_COMPONENT_TYPE_POSITION, sizeof(ecs_component_position), ENTITY_MAX);
-    component_drawable_list = _init_component_list(ECS_COMPONENT_TYPE_DRAWABLE, sizeof(ecs_component_position), ENTITY_MAX);
-    component_physics_list = _init_component_list(ECS_COMPONENT_TYPE_PHYSICS, sizeof(ecs_component_position), ENTITY_MAX);
+    component_drawable_list = _init_component_list(ECS_COMPONENT_TYPE_DRAWABLE, sizeof(ecs_component_drawable), ENTITY_MAX);
+    component_physics_list = _init_component_list(ECS_COMPONENT_TYPE_PHYSICS, sizeof(ecs_component_physics), ENTITY_MAX);
 
     component_collection[ECS_COMPONENT_TYPE_NULL] = NULL;
     component_collection[ECS_COMPONENT_TYPE_POSITION] = component_position_list;

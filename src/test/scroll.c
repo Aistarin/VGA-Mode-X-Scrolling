@@ -61,8 +61,8 @@ ecs_entity* create_entity(gfx_buffer *drawable) {
     ecs_component_drawable *component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_DRAWABLE);
     ecs_component_physics *component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_PHYSICS);
 
-    component_position->x = 128;
-    component_position->y = 128;
+    component_position->x = rand() % (SCREEN_WIDTH - component_drawable->width);
+    component_position->y = rand() % (SCREEN_HEIGHT - component_drawable->height);
     component_drawable->display = TRUE;
     component_drawable->drawable = drawable;
     component_drawable->width = drawable->width;
