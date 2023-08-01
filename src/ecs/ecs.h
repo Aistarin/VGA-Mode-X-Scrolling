@@ -39,6 +39,8 @@ typedef struct ecs_component_list {
     byte component_size;
     byte component_count;
     byte component_count_max;
+    bool handle_manually;                       // skip this component in the loop
+    void (*handler)(ecs_entity*, void*);
     void *components;
 } ecs_component_list;
 
@@ -70,15 +72,15 @@ typedef struct ecs_component_physics {
 } ecs_component_physics;
 
 void ecs_init(void);
-void ecs_handle_systems(void);
-void ecs_handle_graphics(void);
+void ecs_handle_component_type(byte component_type);
+void ecs_handle_components(void);
 void ecs_shutdown(void);
 
 int ecs_get_entity_count(void);
 
-void ecs_set_drawing_function(void (*func)(ecs_entity*));
-void ecs_set_physics_function(void (*func)(ecs_entity*));
 ecs_entity* ecs_instantiate_empty_entity(byte entity_type);
 void* ecs_attach_component_to_entity(ecs_entity *entity, byte component_type);
+
+ecs_component_list* ecs_register_component(byte component_type, int component_size, int component_count_max, void (*handler)(ecs_entity*, void*), bool handle_manually);
 
 #endif

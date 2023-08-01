@@ -37,17 +37,18 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
     return sprite_buffer;
 }
 
-void entity_draw(ecs_entity *entity) {
+void entity_draw_handler(ecs_entity *entity, void *component) {
+    ecs_component_drawable *component_drawable = (ecs_component_drawable *) component;
     ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
-    ecs_component_drawable *component_drawable = entity->components[ECS_COMPONENT_TYPE_DRAWABLE];
+
     int draw_x = component_position->x + component_drawable->x_offset - view_pos_x;
     int draw_y = component_position->y + component_drawable->y_offset - view_pos_y;
 
     gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE);
 }
 
-void entity_physics(ecs_entity *entity) {
-    ecs_component_physics *component_physics = entity->components[ECS_COMPONENT_TYPE_PHYSICS];
+void entity_physics_handler(ecs_entity *entity, void *component) {
+    ecs_component_physics *component_physics = (ecs_component_physics *) component;
     ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
 
     component_physics->hspeed -= component_physics->friction;
@@ -67,13 +68,13 @@ void handle_input() {
 }
 
 void handle_logic() {
-    ecs_handle_systems();
+    ecs_handle_components();
 }
 
 void handle_graphics() {
     /* scroll screen before rendering all */
     gfx_set_scroll_offset(view_pos_x, view_pos_y);
-    ecs_handle_graphics();
+    ecs_handle_component_type(ECS_COMPONENT_TYPE_DRAWABLE);
     gfx_render_all();
 }
 
@@ -87,8 +88,9 @@ int main(int argc, char *argv[]) {
     ecs_init();
     gfx_init();
 
-    ecs_set_drawing_function(entity_draw);
-    ecs_set_physics_function(entity_physics);
+    ecs_register_component(ECS_COMPONENT_TYPE_POSITION, sizeof(ecs_component_position), ENTITY_MAX, NULL, FALSE);
+    ecs_register_component(ECS_COMPONENT_TYPE_DRAWABLE, sizeof(ecs_component_drawable), ENTITY_MAX, entity_draw_handler, TRUE);
+    ecs_register_component(ECS_COMPONENT_TYPE_PHYSICS, sizeof(ecs_component_physics), ENTITY_MAX, entity_physics_handler, FALSE);
 
     drawable = load_sprite("jodi-spr.bmp", 32, 56, TRUE, 16);
 
