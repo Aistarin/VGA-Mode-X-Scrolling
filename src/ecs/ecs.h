@@ -77,6 +77,7 @@ void ecs_shutdown(void);
 int ecs_get_entity_count(void);
 
 void ecs_set_drawing_function(void (*func)(ecs_entity*));
+void ecs_set_physics_function(void (*func)(ecs_entity*));
 ecs_entity* ecs_instantiate_empty_entity(byte entity_type);
 void* ecs_attach_component_to_entity(ecs_entity *entity, byte component_type);
 

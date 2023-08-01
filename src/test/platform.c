@@ -37,13 +37,23 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
     return sprite_buffer;
 }
 
-void draw_entity(ecs_entity *entity) {
+void entity_draw(ecs_entity *entity) {
     ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
     ecs_component_drawable *component_drawable = entity->components[ECS_COMPONENT_TYPE_DRAWABLE];
     int draw_x = component_position->x + component_drawable->x_offset - view_pos_x;
     int draw_y = component_position->y + component_drawable->y_offset - view_pos_y;
 
     gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE);
+}
+
+void entity_physics(ecs_entity *entity) {
+    ecs_component_physics *component_physics = entity->components[ECS_COMPONENT_TYPE_PHYSICS];
+    ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
+
+    component_physics->hspeed -= component_physics->friction;
+    component_physics->vspeed -= component_physics->gravity;
+    component_position->x += component_physics->hspeed;
+    component_position->y += component_physics->vspeed;
 }
 
 void handle_input() {
@@ -62,7 +72,7 @@ void handle_logic() {
 
 void handle_graphics() {
     /* scroll screen before rendering all */
-    gfx_set_scroll_offset(view_pos_x++, view_pos_y);
+    gfx_set_scroll_offset(view_pos_x, view_pos_y);
     ecs_handle_graphics();
     gfx_render_all();
 }
@@ -77,7 +87,8 @@ int main(int argc, char *argv[]) {
     ecs_init();
     gfx_init();
 
-    ecs_set_drawing_function(draw_entity);
+    ecs_set_drawing_function(entity_draw);
+    ecs_set_physics_function(entity_physics);
 
     drawable = load_sprite("jodi-spr.bmp", 32, 56, TRUE, 16);
 
@@ -96,15 +107,15 @@ int main(int argc, char *argv[]) {
     component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_DRAWABLE);
     component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_PHYSICS);
 
-    component_position->x = 0;
-    component_position->y = 0;
+    component_position->x = -32;
+    component_position->y = -56;
     component_drawable->display = TRUE;
     component_drawable->flip_horz = FALSE;
     component_drawable->drawable = drawable;
     component_drawable->width = 32;
     component_drawable->height = 56;
-    component_physics->hspeed = 0;
-    component_physics->vspeed = 0;
+    component_physics->hspeed = 1;
+    component_physics->vspeed = 1;
 
     player = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_PLAYER);
     component_position = (ecs_component_position *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_POSITION);
@@ -112,14 +123,14 @@ int main(int argc, char *argv[]) {
     component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(player, ECS_COMPONENT_TYPE_PHYSICS);
 
     component_position->x = 320;
-    component_position->y = 0;
+    component_position->y = -56;
     component_drawable->display = TRUE;
     component_drawable->flip_horz = FALSE;
     component_drawable->drawable = drawable;
     component_drawable->width = 32;
     component_drawable->height = 56;
-    component_physics->hspeed = 0;
-    component_physics->vspeed = 0;
+    component_physics->hspeed = -1;
+    component_physics->vspeed = 1;
 
     while(!exit_program) {
         handle_input();

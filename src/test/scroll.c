@@ -46,13 +46,35 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
     return sprite_buffer;
 }
 
-void draw_entity(ecs_entity *entity) {
+void entity_draw(ecs_entity *entity) {
     ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
     ecs_component_drawable *component_drawable = entity->components[ECS_COMPONENT_TYPE_DRAWABLE];
     int draw_x = component_position->x + component_drawable->x_offset;
     int draw_y = component_position->y + component_drawable->y_offset;
 
     gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE);
+}
+
+void entity_physics(ecs_entity *entity) {
+    ecs_component_physics *component_physics = entity->components[ECS_COMPONENT_TYPE_PHYSICS];
+    ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
+
+    component_physics->hspeed -= component_physics->friction;
+    component_physics->vspeed -= component_physics->gravity;
+    component_position->x += component_physics->hspeed;
+    component_position->y += component_physics->vspeed;
+
+    if(component_position->x > (320 - 32) || component_position->x < 0) {
+        if(component_position->x > (320 - 32)) component_position->x = (320 - 32);
+        else if(component_position->x < 0) component_position->x = 0;
+        component_physics->hspeed = -(component_physics->hspeed);
+    }
+
+    if(component_position->y > (240 - 56) || component_position->y < 0) {
+        if(component_position->y > (240 - 56)) component_position->y = (240 - 56);
+        else if(component_position->y < 0) component_position->y = 0;
+        component_physics->vspeed = -(component_physics->vspeed);
+    }
 }
 
 ecs_entity* create_entity(gfx_buffer *drawable) {
@@ -87,7 +109,8 @@ int init_handler(void) {
     keyboard_init();
     gfx_init();
 
-    ecs_set_drawing_function(draw_entity);
+    ecs_set_drawing_function(entity_draw);
+    ecs_set_physics_function(entity_physics);
 
     return 0;
 }

@@ -11,8 +11,14 @@ ecs_component_list *component_physics_list;
 
 void (*draw_func)(ecs_entity*);
 
+void (*physics_func)(ecs_entity*);
+
 void ecs_set_drawing_function(void (*func)(ecs_entity*)) {
     draw_func = func;
+}
+
+void ecs_set_physics_function(void (*func)(ecs_entity*)) {
+    physics_func = func;
 }
 
 void* _get_component_at_position(ecs_component_list* component_list, int pos) {
@@ -132,33 +138,13 @@ void _handle_drawable_components() {
 void _handle_physics_components() {
     int i;
     ecs_component_physics *component_physics;
-    ecs_component_position *component_position;
 
     for(i = 0; i < component_physics_list->component_count_max; i++) {
         component_physics = _get_component_at_position(component_physics_list, i);
         if(component_physics->entity_id == 0) {
             continue;
         }
-        component_position = (ecs_component_position *) _get_component_by_entity_id(
-            component_physics->entity_id,
-            ECS_COMPONENT_TYPE_POSITION
-        );
-        component_physics->hspeed -= component_physics->friction;
-        component_physics->vspeed -= component_physics->gravity;
-        component_position->x += component_physics->hspeed;
-        component_position->y += component_physics->vspeed;
-
-        if(component_position->x > (320 - 32) || component_position->x < 0) {
-            if(component_position->x > (320 - 32)) component_position->x = (320 - 32);
-            else if(component_position->x < 0) component_position->x = 0;
-            component_physics->hspeed = -(component_physics->hspeed);
-        }
-
-        if(component_position->y > (240 - 56) || component_position->y < 0) {
-            if(component_position->y > (240 - 56)) component_position->y = (240 - 56);
-            else if(component_position->y < 0) component_position->y = 0;
-            component_physics->vspeed = -(component_physics->vspeed);
-        }
+        physics_func(_get_entity_by_id(component_physics->entity_id));
     }
 }
 
