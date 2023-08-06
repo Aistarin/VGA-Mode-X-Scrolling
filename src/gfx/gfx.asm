@@ -72,51 +72,55 @@ _gfx_blit_clipped_sprite: FUNCTION
     mov esi, dword [sprite_offset]
     mov edi, dword [initial_vga_offset]
 
+    ;; store x_min and x_max in lower bytes of EBX
+    mov bl, byte [x_min]
+    mov bh, byte [x_max]
+
     ;; subtract sprite width and page offset by the difference of
     ;; x_min and x_max and store in the upper bytes of DX
     ;; NOTE: since we are defining PAGE_WIDTH to be 1/4th of the
     ;; true page width (336px), this should always fit within a byte
     mov dl, byte [sprite_width]
-    sub dl, byte [x_max]
-    add dl, byte [x_min]
+    sub dl, bh
+    add dl, bl
     mov dh, PAGE_WIDTH
-    sub dh, byte [x_max]
-    add dh, byte [x_min]
+    sub dh, bh
+    add dh, bl
 
-    ;; store y_min and y_max in upper bytes and x_min and x_max
-    ;; in lower bytes of EBX
-
-    mov bl, byte [x_min]
-    mov bh, byte [x_max]
+    ;; store y_min and y_max in upper bytes of EBX
     rol ebx, 16
     mov bl, byte [y_min]
     mov bh, byte [y_max]
-    mov ch, bl                          ;; store y_min in upper bytes of CX
+
+    ;; set upper counter bits to y_min
+    mov ch, bl
 
     outerClipLoop:
+        cmp ch, bh
+        jge clipDone                    ;; break out of outer loop if upper counter >= y_max
         rol ebx, 16                     ;; move x_min and x_max into lower bits of EBX
         mov cl, bl                      ;; set lower counter bits to x_min
     innerClipLoop:
+        cmp cl, bh
+        jge innerClipLoopEnd            ;; break out of inner loop if lower counter >= x_max
         lodsb                           ;; increments ESI
         test al, al
         jz skipClipPixel                ;; if pixel stored in AL is 0, increment EDI
         stosb                           ;; increments EDI
-    innerClipLoopEnd:
         inc cl
-        cmp cl, bh
-        jne innerClipLoop               ;; loop again if lower counter != x_max
+        jmp innerClipLoop
+    skipClipPixel:
+        inc edi
+        inc cl
+        jmp innerClipLoop
+    innerClipLoopEnd:
         mov al, dl                      ;; sprite_width - x_max + x_min
         add esi, eax
         mov al, dh                      ;; PAGE_WIDTH - x_max + x_min
         add edi, eax
         rol ebx, 16                     ;; move y_min and y_max into lower bits of EBX
         inc ch
-        cmp ch, bh
-        jne outerClipLoop               ;; loop again if upper counter != y_max
-        jmp clipDone
-    skipClipPixel:
-        inc edi
-        jmp innerClipLoopEnd
+        jmp outerClipLoop
     clipDone:
         popa
 
