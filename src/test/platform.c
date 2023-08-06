@@ -29,6 +29,7 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
         compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset);
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
         spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset);
+        sprite_buffer->buffer_flags |= GFX_BUFFER_FLAG_CLIPPING;
     } else {
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, 0);
         gfx_load_linear_bitmap_to_planar_bitmap(scratch_buffer, sprite_buffer->buffer, sprite_width, sprite_height, TRUE);

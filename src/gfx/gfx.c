@@ -328,6 +328,7 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int dest_x, int dest_y, bool 
     int draw_x = dest_x;
     int draw_y = dest_y;
     int x_offset = 0, y_offset = 0;
+    bool can_be_clipped = bitmap->buffer_flags & GFX_BUFFER_FLAG_CLIPPING;
 
     // do not draw bitmaps that go completely offscreen
     if((draw_x + bitmap->width) < 0
@@ -353,6 +354,7 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int dest_x, int dest_y, bool 
         draw_y = 0 + SCREEN_HEIGHT - bitmap->height;
     }
 
+    // clear calculated offsets if bitmap does not support clipping
     _gfx_add_sprite_to_draw(
         screen_state_current,
         bitmap,
@@ -360,8 +362,8 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int dest_x, int dest_y, bool 
         (word) draw_y + (view_scroll_y % TILE_HEIGHT),
         bitmap->width,
         bitmap->height,
-        x_offset,
-        y_offset,
+        can_be_clipped ? x_offset : 0,
+        can_be_clipped ? y_offset : 0,
         flip_horz
     );
 }
@@ -474,13 +476,11 @@ void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word des
 }
 
 void gfx_blit_clipped_planar_sprite(gfx_sprite_to_draw *sprite, byte *initial_vga_offset, byte selected_plane){
-    byte sprite_width = sprite->width >> 2;
-    byte *sprite_buffer = sprite->sprite_buffer->buffer;
-    byte x, x_min = 0, x_max = sprite_width, y, y_min, y_max, pixel;
-    byte *current_vga_offset = initial_vga_offset;
-    byte sprite_plane = sprite->x_offset < 0 ? plane_offset_clipping_left[abs(sprite->x_offset)][selected_plane] : plane_offset_clipping_right[abs(sprite->x_offset)][selected_plane];
-    dword sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane];
+    byte x, x_min, x_max, y, y_min, y_max, pixel, sprite_plane, sprite_width = sprite->width >> 2;
+    dword sprite_offset;
     int x_offset = sprite->x_offset;
+    byte *sprite_buffer = sprite->sprite_buffer->buffer;
+    byte *current_vga_offset = initial_vga_offset;
 
     if(sprite->y_offset < 0) {
         y_min = abs(sprite->y_offset);
@@ -492,31 +492,32 @@ void gfx_blit_clipped_planar_sprite(gfx_sprite_to_draw *sprite, byte *initial_vg
     }
 
     if(x_offset < 0) {
+        sprite_plane = plane_offset_clipping_left[abs(x_offset)][selected_plane];
+        // overwrite x_offset with offset calculated from clipping table
         x_offset = x_offset_clipping_left[abs(x_offset)][selected_plane];
         x_min = x_offset;
         x_max = sprite_width;
-        for(y = y_min; y < y_max; y++) {
-            for(x = x_min; x < x_max; x++) {
-                pixel = sprite_buffer[sprite_offset + (y * sprite_width) + x];
-                if(pixel) {
-                    current_vga_offset[x - x_min] = pixel;
-                }
-            }
-            current_vga_offset += PAGE_WIDTH >> 2;
-        }
+        current_vga_offset -= x_offset;
     } else {
+        sprite_plane = plane_offset_clipping_right[abs(x_offset)][selected_plane];
+        // overwrite x_offset with offset calculated from clipping table
         x_offset = x_offset_clipping_right[abs(x_offset)][selected_plane];
         x_min = 0;
         x_max = sprite_width - x_offset;
-        for(y = y_min; y < y_max; y++) {
-            for(x = x_min; x < x_max; x++) {
-                pixel = sprite_buffer[sprite_offset + (y * sprite_width) + x];
-                if(pixel) {
-                    current_vga_offset[x + x_offset] = pixel;
-                }
+        current_vga_offset += x_offset;
+    }
+
+    sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane] + (y_min * sprite_width) + x_min;
+
+    for(y = y_min; y < y_max; y++) {
+        for(x = x_min; x < x_max; x++) {
+            pixel = sprite_buffer[sprite_offset++];
+            if(pixel) {
+                current_vga_offset[x] = pixel;
             }
-            current_vga_offset += PAGE_WIDTH >> 2;
         }
+        sprite_offset += sprite_width - x_max + x_min;
+        current_vga_offset += PAGE_WIDTH >> 2;
     }
 }
 
@@ -661,7 +662,7 @@ void _blit_sprite_onto_plane(gfx_sprite_to_draw *sprite, byte plane) {
         + ((sprite->dest_x + selected_plane) >> 2);
 
     // if an offset has been set, then the sprite is to be clipped
-    if(sprite->x_offset != 0 || sprite->y_offset != 0) {
+    if(sprite->sprite_buffer->buffer_flags & GFX_BUFFER_FLAG_CLIPPING && (sprite->x_offset != 0 || sprite->y_offset != 0)) {
         gfx_blit_clipped_planar_sprite(sprite, &VGA[initial_vga_offset], selected_plane);
     } else {
         sprite_offset = sprite->sprite_buffer->plane_offsets[selected_plane];
