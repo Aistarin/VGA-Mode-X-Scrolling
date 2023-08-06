@@ -5,7 +5,7 @@
 #include <conio.h>
 #include <i86.h>
 
-#define VGA_START       0xA000  // VGA memory start index
+#define VGA_START       0xA0000 // VGA memory start index
 
 #define SC_INDEX        0x03c4  // VGA sequence controller index
 #define SC_DATA         0x03c5

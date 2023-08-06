@@ -1,7 +1,7 @@
 #include "vga.h"
 #include <string.h>
 
-byte *VGA = (byte *) 0xA0000;
+byte *VGA = (byte *) VGA_START;
 
 byte p[5] = {0,2,4,6,8};
 byte pix;
