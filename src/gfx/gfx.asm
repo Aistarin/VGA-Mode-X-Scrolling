@@ -60,6 +60,68 @@ _gfx_blit_sprite: FUNCTION
         popa
 ENDFUNCTION
 
+GLOBAL _gfx_blit_clipped_sprite
+_gfx_blit_clipped_sprite: FUNCTION
+    %arg initial_vga_offset:dword, sprite_offset:dword, sprite_width:byte, x_min:byte, x_max:byte, y_min:byte, y_max:byte
+    pusha
+    cld
+
+    ;; clear EAX
+    mov eax, 0
+
+    mov esi, dword [sprite_offset]
+    mov edi, dword [initial_vga_offset]
+
+    ;; subtract sprite width and page offset by the difference of
+    ;; x_min and x_max and store in the upper bytes of DX
+    ;; NOTE: since we are defining PAGE_WIDTH to be 1/4th of the
+    ;; true page width (336px), this should always fit within a byte
+    mov dl, byte [sprite_width]
+    sub dl, byte [x_max]
+    add dl, byte [x_min]
+    mov dh, PAGE_WIDTH
+    sub dh, byte [x_max]
+    add dh, byte [x_min]
+
+    ;; store y_min and y_max in upper bytes and x_min and x_max
+    ;; in lower bytes of EBX
+
+    mov bl, byte [x_min]
+    mov bh, byte [x_max]
+    rol ebx, 16
+    mov bl, byte [y_min]
+    mov bh, byte [y_max]
+    mov ch, bl                          ;; store y_min in upper bytes of CX
+
+    outerClipLoop:
+        rol ebx, 16                     ;; move x_min and x_max into lower bits of EBX
+        mov cl, bl                      ;; set lower counter bits to x_min
+    innerClipLoop:
+        lodsb                           ;; increments ESI
+        test al, al
+        jz skipClipPixel                ;; if pixel stored in AL is 0, increment EDI
+        stosb                           ;; increments EDI
+    innerClipLoopEnd:
+        inc cl
+        cmp cl, bh
+        jne innerClipLoop               ;; loop again if lower counter != x_max
+        mov al, dl                      ;; sprite_width - x_max + x_min
+        add esi, eax
+        mov al, dh                      ;; PAGE_WIDTH - x_max + x_min
+        add edi, eax
+        rol ebx, 16                     ;; move y_min and y_max into lower bits of EBX
+        inc ch
+        cmp ch, bh
+        jne outerClipLoop               ;; loop again if upper counter != y_max
+        jmp clipDone
+    skipClipPixel:
+        inc edi
+        jmp innerClipLoopEnd
+    clipDone:
+        popa
+
+ENDFUNCTION
+
 GLOBAL _gfx_blit_16_x_16_tile
 _gfx_blit_16_x_16_tile: FUNCTION
     %arg vga_offset:dword, tile_offset:dword

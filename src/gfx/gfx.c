@@ -507,18 +507,33 @@ void gfx_blit_clipped_planar_sprite(gfx_sprite_to_draw *sprite, byte *initial_vg
         current_vga_offset += x_offset;
     }
 
+    current_vga_offset += x_min;
     sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane] + (y_min * sprite_width) + x_min;
 
-    for(y = y_min; y < y_max; y++) {
-        for(x = x_min; x < x_max; x++) {
-            pixel = sprite_buffer[sprite_offset++];
-            if(pixel) {
-                current_vga_offset[x] = pixel;
-            }
-        }
-        sprite_offset += sprite_width - x_max + x_min;
-        current_vga_offset += PAGE_WIDTH >> 2;
-    }
+    gfx_blit_clipped_sprite(
+        current_vga_offset,
+        sprite_buffer + sprite_offset,
+        (byte) sprite_width,
+        x_min,
+        x_max,
+        y_min,
+        y_max
+    );
+
+    // current_vga_offset += x_min - 1;
+    // sprite_offset = sprite->sprite_buffer->plane_offsets[sprite_plane] + (y_min * sprite_width) + x_min;
+
+    // for(y = y_min; y < y_max; y++) {
+    //     for(x = x_min; x < x_max; x++) {
+    //         pixel = sprite_buffer[sprite_offset++];
+    //         current_vga_offset++;
+    //         if(pixel) {
+    //             current_vga_offset[0] = pixel;
+    //         }
+    //     }
+    //     sprite_offset += sprite_width - (x_max - x_min);
+    //     current_vga_offset += (PAGE_WIDTH >> 2) - (x_max - x_min);
+    // }
 }
 
 /**
