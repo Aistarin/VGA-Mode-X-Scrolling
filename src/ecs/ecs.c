@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int entity_count = 1; // Entity ID 0 is reserved as a null entity value for components
+int entity_count = 0;
 ecs_entity *entities;
 ecs_component_list *component_collection[COMPONENT_MAX];
 
@@ -23,7 +23,7 @@ ecs_entity* ecs_instantiate_empty_entity(byte entity_type) {
             break;
     }
 
-    entity->entity_id = entity_count++;
+    entity->entity_id = i;
     entity->entity_type = entity_type;
     entity->component_count = 0;
 
@@ -31,6 +31,8 @@ ecs_entity* ecs_instantiate_empty_entity(byte entity_type) {
     for(i = 0; i < COMPONENT_MAX; i++) {
         entity->components[i] = NULL;
     }
+
+    entity_count++;
 
     // printf("Instantiated entity of type %d with id %d\n", entity->entity_type, entity->entity_id);
     return entity;
@@ -124,7 +126,7 @@ void _handle_components(ecs_component_list* component_list) {
 }
 
 int ecs_get_entity_count(void) {
-    return entity_count - 1;
+    return entity_count;
 }
 
 void ecs_init(void) {
