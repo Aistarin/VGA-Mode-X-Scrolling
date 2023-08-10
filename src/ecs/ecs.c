@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-ecs_entity_list *entity_list;
+int entity_count = 1; // Entity ID 0 is reserved as a null entity value for components
+ecs_entity *entities;
 ecs_component_list *component_collection[COMPONENT_MAX];
 
 void* _get_component_at_position(ecs_component_list* component_list, int pos) {
@@ -15,14 +16,14 @@ ecs_entity* ecs_instantiate_empty_entity(byte entity_type) {
     ecs_entity *entity;
 
     // scan entity list until we find an "empty" one represented by a null entity type,
-    // skipping entity 0 (since it is reserved as a null entity value for components)
+    // skipping Entity ID 0 (since it is reserved as a null entity value for components)
     for(i = 1; i < ENTITY_MAX; i++) {
-        entity = &entity_list->entities[i];
-        if(entity->entity_type == ECS_ENTITY_TYPE_NULL)
+        entity = &entities[i];
+        if(entity->entity_type == 0)
             break;
     }
 
-    entity->entity_id = ++entity_list->entity_count;
+    entity->entity_id = entity_count++;
     entity->entity_type = entity_type;
     entity->component_count = 0;
 
@@ -69,7 +70,7 @@ void* ecs_attach_component_to_entity(ecs_entity *entity, byte component_type) {
 }
 
 ecs_entity* _get_entity_by_id(byte entity_id) {
-    return &entity_list->entities[entity_id];
+    return &entities[entity_id];
 }
 
 void* _get_component_by_entity_id(byte entity_id, byte component_type) {
@@ -77,11 +78,9 @@ void* _get_component_by_entity_id(byte entity_id, byte component_type) {
     return entity->components[component_type];
 }
 
-ecs_entity_list* _init_entity_list() {
-    struct ecs_entity_list* new_entity_list;
-    new_entity_list = malloc(sizeof(struct ecs_entity_list));
-    memset((byte *) new_entity_list, 0, sizeof(struct ecs_entity_list));
-    return new_entity_list;
+void _init_entity_list() {
+    entities = malloc(sizeof(struct ecs_entity) * ENTITY_MAX);
+    memset((byte *) entities, 0, sizeof(struct ecs_entity) * ENTITY_MAX);
 }
 
 ecs_component_list* ecs_register_component(byte component_type, int component_size, int component_count_max, void (*handler)(ecs_entity*, void*), bool handle_manually) {
@@ -125,12 +124,11 @@ void _handle_components(ecs_component_list* component_list) {
 }
 
 int ecs_get_entity_count(void) {
-    return entity_list->entity_count;
+    return entity_count - 1;
 }
 
 void ecs_init(void) {
-    entity_list = _init_entity_list();
-    component_collection[ECS_COMPONENT_TYPE_NULL] = NULL;
+    _init_entity_list();
 }
 
 void ecs_handle_component_type(byte component_type) {

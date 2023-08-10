@@ -1,3 +1,4 @@
+#include "scroll.h"
 #include "src/common.h"
 #include "src/ecs/ecs.h"
 #include "src/gfx/gfx.h"
@@ -57,42 +58,39 @@ void entity_draw_handler(ecs_entity *entity, void *component) {
     gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE);
 }
 
-void entity_physics_handler(ecs_entity *entity, void *component) {
-    ecs_component_physics *component_physics = (ecs_component_physics *) component;
+void entity_movement_handler(ecs_entity *entity, void *component) {
+    ecs_component_movement *component_movement = (ecs_component_movement *) component;
     ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
 
-    component_physics->hspeed -= component_physics->friction;
-    component_physics->vspeed -= component_physics->gravity;
-    component_position->x += component_physics->hspeed;
-    component_position->y += component_physics->vspeed;
+    component_position->x += component_movement->hspeed;
+    component_position->y += component_movement->vspeed;
 
     if(component_position->x > (320 - 32) || component_position->x < 0) {
         if(component_position->x > (320 - 32)) component_position->x = (320 - 32);
         else if(component_position->x < 0) component_position->x = 0;
-        component_physics->hspeed = -(component_physics->hspeed);
+        component_movement->hspeed = -(component_movement->hspeed);
     }
 
     if(component_position->y > (240 - 56) || component_position->y < 0) {
         if(component_position->y > (240 - 56)) component_position->y = (240 - 56);
         else if(component_position->y < 0) component_position->y = 0;
-        component_physics->vspeed = -(component_physics->vspeed);
+        component_movement->vspeed = -(component_movement->vspeed);
     }
 }
 
 ecs_entity* create_entity(gfx_buffer *drawable) {
-    ecs_entity *entity = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_PLAYER);
+    ecs_entity *entity = ecs_instantiate_empty_entity(ECS_ENTITY_TYPE_SPRITE);
     ecs_component_position *component_position = (ecs_component_position *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_POSITION);
     ecs_component_drawable *component_drawable = (ecs_component_drawable *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_DRAWABLE);
-    ecs_component_physics *component_physics = (ecs_component_physics *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_PHYSICS);
+    ecs_component_movement *component_movement = (ecs_component_movement *) ecs_attach_component_to_entity(entity, ECS_COMPONENT_TYPE_MOVEMENT);
 
     component_position->x = rand() % (SCREEN_WIDTH - component_drawable->width);
     component_position->y = rand() % (SCREEN_HEIGHT - component_drawable->height);
-    component_drawable->display = TRUE;
     component_drawable->drawable = drawable;
     component_drawable->width = drawable->width;
     component_drawable->height = drawable->height;
-    component_physics->hspeed = 1 + rand() % 5;
-    component_physics->vspeed = 1 + rand() % 5;
+    component_movement->hspeed = 1 + rand() % 5;
+    component_movement->vspeed = 1 + rand() % 5;
     return entity;
 }
 
@@ -113,7 +111,7 @@ int init_handler(void) {
 
     ecs_register_component(ECS_COMPONENT_TYPE_POSITION, sizeof(ecs_component_position), ENTITY_MAX, NULL, FALSE);
     ecs_register_component(ECS_COMPONENT_TYPE_DRAWABLE, sizeof(ecs_component_drawable), ENTITY_MAX, entity_draw_handler, TRUE);
-    ecs_register_component(ECS_COMPONENT_TYPE_PHYSICS, sizeof(ecs_component_physics), ENTITY_MAX, entity_physics_handler, FALSE);
+    ecs_register_component(ECS_COMPONENT_TYPE_MOVEMENT, sizeof(ecs_component_movement), ENTITY_MAX, entity_movement_handler, FALSE);
 
     return 0;
 }

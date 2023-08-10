@@ -12,7 +12,7 @@ TEST_OBJ_LIST = pattern.obj
 scroll : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
 	cp res/jodi.bmp build/jodi.bmp
 	cp res/jodi-spr.bmp build/jodi-spr.bmp
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/scroll.c -c -fo=obj/scroll.obj
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/scroll/scroll.c -c -fo=obj/scroll.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
 tile : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
@@ -29,7 +29,7 @@ platform : clean $(OBJ_LIST)
 	cp res/jodi-spr.bmp build/jodi-spr.bmp
 	cp res/testtile.bmp build/testtile.bmp
 	cp res/test.map build/test.map
-	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/platform.c -c -fo=obj/platform.obj
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/platform/platform.c -c -fo=obj/platform.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
 testasm : clean
