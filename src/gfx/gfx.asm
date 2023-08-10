@@ -126,6 +126,79 @@ _gfx_blit_clipped_sprite: FUNCTION
 
 ENDFUNCTION
 
+GLOBAL _gfx_blit_clipped_sprite_with_palette_offset
+_gfx_blit_clipped_sprite_with_palette_offset: FUNCTION
+    %arg initial_vga_offset:dword, sprite_offset:dword, sprite_width:byte, x_min:byte, x_max:byte, y_min:byte, y_max:byte, palette_offset:byte
+    pusha
+    cld
+
+    ;; clear EAX
+    mov eax, 0
+
+    mov esi, dword [sprite_offset]
+    mov edi, dword [initial_vga_offset]
+
+    ;; store palette offset in upper bytes of EDX
+    mov dl, byte [palette_offset]
+    rol edx, 16
+
+    ;; store x_min and x_max in lower bytes of EBX
+    mov bl, byte [x_min]
+    mov bh, byte [x_max]
+
+    ;; subtract sprite width and page offset by the difference of
+    ;; x_min and x_max and store in the upper bytes of DX
+    ;; NOTE: since we are defining PAGE_WIDTH to be 1/4th of the
+    ;; true page width (336px), this should always fit within a byte
+    mov dl, byte [sprite_width]
+    sub dl, bh
+    add dl, bl
+    mov dh, PAGE_WIDTH
+    sub dh, bh
+    add dh, bl
+
+    ;; store y_min and y_max in upper bytes of EBX
+    rol ebx, 16
+    mov bl, byte [y_min]
+    mov bh, byte [y_max]
+
+    ;; set upper counter bits to y_min
+    mov ch, bl
+
+    outerClipPalLoop:
+        cmp ch, bh
+        jge clipPalDone                 ;; break out of outer loop if upper counter >= y_max
+        rol ebx, 16                     ;; move x_min and x_max into lower bits of EBX
+        rol edx, 16                     ;; move palette_offset into lower bits of EDX
+        mov cl, bl                      ;; set lower counter bits to x_min
+    innerClipPalLoop:
+        cmp cl, bh
+        jge innerClipPalLoopEnd         ;; break out of inner loop if lower counter >= x_max
+        lodsb                           ;; increments ESI
+        test al, al
+        jz skipClipPalPixel             ;; if pixel stored in AL is 0, increment EDI
+        add al, dl                      ;; add palette_offset to byte to be written to VRAM
+        stosb                           ;; increments EDI
+        inc cl
+        jmp innerClipPalLoop
+    skipClipPalPixel:
+        inc edi
+        inc cl
+        jmp innerClipPalLoop
+    innerClipPalLoopEnd:
+        rol edx, 16                     ;; move calculated sprite and page widths into lower bits of EDX
+        mov al, dl                      ;; sprite_width - x_max + x_min
+        add esi, eax
+        mov al, dh                      ;; PAGE_WIDTH - x_max + x_min
+        add edi, eax
+        rol ebx, 16                     ;; move y_min and y_max into lower bits of EBX
+        inc ch
+        jmp outerClipPalLoop
+    clipPalDone:
+        popa
+
+ENDFUNCTION
+
 GLOBAL _gfx_blit_16_x_16_tile
 _gfx_blit_16_x_16_tile: FUNCTION
     %arg vga_offset:dword, tile_offset:dword
@@ -274,11 +347,12 @@ ENDFUNCTION
 
 GLOBAL _gfx_blit_compiled_planar_sprite_scheme_2
 _gfx_blit_compiled_planar_sprite_scheme_2: FUNCTION
-    %arg vga_offset:dword, sprite_offset:dword, sprite_data_offset:dword
+    %arg vga_offset:dword, sprite_offset:dword, sprite_data_offset:dword, palette_offset:byte
     pusha
     cld
 
-    mov esi, [sprite_data_offset]
+    mov ah, byte [palette_offset]       ;; load palette offset into ah (if compiled sprite uses it)
+    mov esi, dword [sprite_data_offset]
     mov edi, dword [vga_offset]         ;; set destination to where sprite will be drawn in VRAM
 
     call dword [sprite_offset]

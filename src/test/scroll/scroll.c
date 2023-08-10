@@ -36,9 +36,9 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
     load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette, palette_offset);
 
     if(compiled) {
-        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset);
+        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset, FALSE);
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
-        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset);
+        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset, FALSE);
         sprite_buffer->buffer_flags |= GFX_BUFFER_FLAG_CLIPPING;
     } else {
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, 0);
@@ -55,7 +55,7 @@ void entity_draw_handler(ecs_entity *entity, void *component) {
     int draw_x = component_position->x + component_drawable->x_offset;
     int draw_y = component_position->y + component_drawable->y_offset;
 
-    gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE);
+    gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE, 0);
 }
 
 void entity_movement_handler(ecs_entity *entity, void *component) {

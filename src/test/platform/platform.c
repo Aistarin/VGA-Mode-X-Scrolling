@@ -9,6 +9,7 @@
 #include <conio.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 bool exit_program = FALSE;
 byte palette[256*3];
@@ -27,9 +28,9 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
     load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette, palette_offset);
 
     if(compiled) {
-        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset);
+        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset, TRUE);
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
-        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset);
+        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset, TRUE);
         sprite_buffer->buffer_flags |= GFX_BUFFER_FLAG_CLIPPING;
     } else {
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, 0);
@@ -46,7 +47,7 @@ void entity_draw_handler(ecs_entity *entity, void *component) {
     int draw_x = component_position->x + component_drawable->x_offset - view_pos_x;
     int draw_y = component_position->y + component_drawable->y_offset - view_pos_y;
 
-    gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE);
+    gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE, component_drawable->palette_offset);
 }
 
 void entity_physics_handler(ecs_entity *entity, void *component) {
@@ -96,6 +97,15 @@ int main(int argc, char *argv[]) {
 
     drawable = load_sprite("jodi-spr.bmp", 32, 56, TRUE, 16);
 
+    memcpy(&palette[32 * 3], &palette[16 * 3], 16 * 3);
+
+    palette[(32 * 3) + (13 * 3)] = 22 >> 2;
+    palette[(32 * 3) + (13 * 3) + 1] = 22 >> 2;
+    palette[(32 * 3) + (13 * 3) + 2] = 99 >> 2;
+    palette[(32 * 3) + (14 * 3)] = 58 >> 2;
+    palette[(32 * 3) + (14 * 3) + 1] = 58 >> 2;
+    palette[(32 * 3) + (14 * 3) + 2] = 146 >> 2;
+
     tileset_buffer = gfx_get_tileset_buffer();
     tilemap_buffer = gfx_get_tilemap_buffer();
 
@@ -118,6 +128,7 @@ int main(int argc, char *argv[]) {
     component_drawable->drawable = drawable;
     component_drawable->width = 32;
     component_drawable->height = 56;
+    component_drawable->palette_offset = 0;
     component_physics->hspeed = 1;
     component_physics->vspeed = 1;
 
@@ -133,6 +144,7 @@ int main(int argc, char *argv[]) {
     component_drawable->drawable = drawable;
     component_drawable->width = 32;
     component_drawable->height = 56;
+    component_drawable->palette_offset = 16;
     component_physics->hspeed = -1;
     component_physics->vspeed = 1;
 

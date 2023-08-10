@@ -34,7 +34,8 @@ enum gfx_buffer_flags {
     GFX_BUFFER_FLAG_PLANAR          = 0x01, // buffer is in planar format
     GFX_BUFFER_FLAG_COMPILED        = 0x02, // buffer contains compiled instructions
     GFX_BUFFER_FLAG_CLIPPING        = 0x04, // buffer supports clipping/has a clipping fallback
-    GFX_BUFFER_FLAG_ROW_MAJOR       = 0x08  // planar data is stored in row-major order
+    GFX_BUFFER_FLAG_ROW_MAJOR       = 0x08, // planar data is stored in row-major order
+    GFX_BUFFER_FLAG_PALETTE_OFFSET  = 0x016 // compiled instructions can accept a palette offset
 };
 
 typedef struct gfx_buffer {
@@ -62,6 +63,7 @@ typedef struct gfx_sprite_to_draw {
     word height;
     int x_offset;
     int y_offset;
+    byte palette_offset;                    // index of sprite's palette offset
     bool flip_horz;
 } gfx_sprite_to_draw;
 
@@ -102,7 +104,7 @@ void gfx_mirror_page(void);
 void gfx_render_all(void);
 void gfx_load_tileset(void);
 void gfx_reload_tilemap(byte x_offset, byte y_offset);
-void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int draw_x, int draw_y, bool flip_horz);
+void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int draw_x, int draw_y, bool flip_horz, byte palette_offset);
 void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 void gfx_load_linear_bitmap_to_planar_bitmap(byte *source_bitmap, byte *dest_bitmap, word width, word height, bool row_major);
 void gfx_set_scroll_offset(word x_offset, word y_offset);
@@ -110,9 +112,10 @@ gfx_tilemap* gfx_get_tilemap_buffer(void);
 
 extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte sprite_height);
 extern void gfx_blit_clipped_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte x_min, byte x_max, byte y_min, byte y_max);
+extern void gfx_blit_clipped_sprite_with_palette_offset(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte x_min, byte x_max, byte y_min, byte y_max, byte palette_offset);
 extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
 extern void gfx_blit_8_x_8_tile(byte *vga_offset, byte *tile_offset);
 extern void gfx_blit_compiled_planar_sprite_scheme_1(byte *vga_offset, byte *sprite_offset, dword iter);
-extern void gfx_blit_compiled_planar_sprite_scheme_2(byte *vga_offset, byte *sprite_offset, byte *sprite_data_offset);
+extern void gfx_blit_compiled_planar_sprite_scheme_2(byte *vga_offset, byte *sprite_offset, byte *sprite_data_offset, byte palette_offset);
 
 #endif

@@ -69,7 +69,7 @@ dword spr_compile_planar_sprite_scheme_1(byte *sprite_buffer, word width, word h
     return output_pos;
 }
 
-dword spr_compile_planar_sprite_scheme_2(byte *sprite_buffer, word width, word height, byte *output_buffer, dword *plane_offsets, byte palette_offset) {
+dword spr_compile_planar_sprite_scheme_2(byte *sprite_buffer, word width, word height, byte *output_buffer, dword *plane_offsets, byte palette_offset, bool palette_swappable) {
     byte plane, pixel;
     word x, y;
     dword src_offset, dest_offset, buffer_length = 0, sprite_offset = 0;
@@ -125,10 +125,20 @@ dword spr_compile_planar_sprite_scheme_2(byte *sprite_buffer, word width, word h
                         dest_offset = 0;
                     }
                     if(!calculate_only) {
-                        output_buffer[buffer_length++] = 0xa4;
-                        // printf("movsb\n");
+                        if(palette_swappable) {
+                            output_buffer[buffer_length++] = 0xac;
+                            output_buffer[buffer_length++] = 0x00;
+                            output_buffer[buffer_length++] = 0xe0;
+                            output_buffer[buffer_length++] = 0xaa;
+                            // printf("lodsb\n");
+                            // printf("add al, ah\n");
+                            // printf("stosb\n");
+                        } else {
+                            output_buffer[buffer_length++] = 0xa4;
+                            // printf("movsb\n");
+                        }
                     } else {
-                        buffer_length++;
+                        buffer_length += palette_swappable ? 4 : 1;
                     }
                 } else {
                     src_offset++;

@@ -35,6 +35,7 @@ typedef struct ecs_component_drawable {
     word height;
     bool display;
     bool flip_horz;
+    byte palette_offset;
     void *drawable;
 } ecs_component_drawable;
 

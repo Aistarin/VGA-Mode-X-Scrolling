@@ -156,7 +156,7 @@ struct gfx_tilemap* _init_tilemap(byte horz_tiles, byte vert_tiles) {
     return tilemap;
 }
 
-void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_buffer, word dest_x, word dest_y, word width, word height, int x_offset, int y_offset, bool flip_horz) {
+void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_buffer, word dest_x, word dest_y, word width, word height, int x_offset, int y_offset, bool flip_horz, byte palette_offset) {
     gfx_sprite_to_draw *cur_sprite = &sprites_to_draw[sprites_to_draw_count++];
     word max_width = MIN(PAGE_WIDTH, dest_x + width) - dest_x;
     word max_height = MIN(PAGE_HEIGHT, dest_y + height) - dest_y;
@@ -169,6 +169,7 @@ void _gfx_add_sprite_to_draw(gfx_screen_state *screen_state, gfx_buffer *sprite_
     cur_sprite->x_offset = x_offset;
     cur_sprite->y_offset = y_offset;
     cur_sprite->flip_horz = flip_horz;
+    cur_sprite->palette_offset = palette_offset;
 }
 
 /**
@@ -324,7 +325,7 @@ void _gfx_draw_linear_bitmap_to_planar_bitmap(
     }
 }
 
-void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int dest_x, int dest_y, bool flip_horz) {
+void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int dest_x, int dest_y, bool flip_horz, byte palette_offset) {
     int draw_x = dest_x;
     int draw_y = dest_y;
     int x_offset = 0, y_offset = 0;
@@ -364,7 +365,8 @@ void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int dest_x, int dest_y, bool 
         bitmap->height,
         can_be_clipped ? x_offset : 0,
         can_be_clipped ? y_offset : 0,
-        flip_horz
+        flip_horz,
+        palette_offset
     );
 }
 
@@ -521,15 +523,28 @@ void gfx_blit_clipped_planar_sprite(gfx_sprite_to_draw *sprite, byte *initial_vg
     //     sprite_offset += sprite_width - (x_max - x_min);
     //     current_vga_offset += (PAGE_WIDTH >> 2) - (x_max - x_min);
     // }
-    gfx_blit_clipped_sprite(
-        current_vga_offset,
-        &sprite_buffer[sprite_offset],
-        sprite_width,
-        x_min,
-        x_max,
-        y_min,
-        y_max
-    );
+    if(sprite->sprite_buffer->buffer_flags & GFX_BUFFER_FLAG_PALETTE_OFFSET) {
+        gfx_blit_clipped_sprite_with_palette_offset(
+            current_vga_offset,
+            &sprite_buffer[sprite_offset],
+            sprite_width,
+            x_min,
+            x_max,
+            y_min,
+            y_max,
+            sprite->palette_offset
+        );
+    } else {
+        gfx_blit_clipped_sprite(
+            current_vga_offset,
+            &sprite_buffer[sprite_offset],
+            sprite_width,
+            x_min,
+            x_max,
+            y_min,
+            y_max
+        );
+    }
 }
 
 /**
@@ -682,7 +697,8 @@ void _blit_sprite_onto_plane(gfx_sprite_to_draw *sprite, byte plane) {
             gfx_blit_compiled_planar_sprite_scheme_2(
                 &VGA[initial_vga_offset],
                 &sprite_buffer[sprite_offset + ((dword) (sprite->width >> 2) * (dword) sprite->height)],
-                &sprite_buffer[sprite_offset]
+                &sprite_buffer[sprite_offset],
+                sprite->palette_offset
             );
         } else {
             gfx_blit_sprite(
