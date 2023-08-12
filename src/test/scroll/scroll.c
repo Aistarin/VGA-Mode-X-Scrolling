@@ -33,12 +33,12 @@ void* load_sprite(char *filename, word sprite_width, word sprite_height, bool co
     gfx_buffer *sprite_buffer;
     dword compiled_sized = 0;
 
-    load_bmp_to_buffer("jodi-spr.bmp", scratch_buffer, sprite_width, sprite_height, palette, palette_offset);
+    load_bmp_to_buffer(filename, scratch_buffer, sprite_width, sprite_height, palette, palette_offset);
 
     if(compiled) {
-        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset, FALSE);
+        compiled_sized = spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, NULL, NULL, palette_offset, TRUE);
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, compiled_sized);
-        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset, FALSE);
+        spr_compile_planar_sprite_scheme_2(scratch_buffer, sprite_width, sprite_height, sprite_buffer->buffer, sprite_buffer->plane_offsets, palette_offset, TRUE);
         sprite_buffer->buffer_flags |= GFX_BUFFER_FLAG_CLIPPING;
     } else {
         sprite_buffer = gfx_create_empty_buffer(0, sprite_width, sprite_height, TRUE, 0);
@@ -55,24 +55,25 @@ void entity_draw_handler(ecs_entity *entity, void *component) {
     int draw_x = component_position->x + component_drawable->x_offset;
     int draw_y = component_position->y + component_drawable->y_offset;
 
-    gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE, 0);
+    gfx_draw_bitmap_to_screen((gfx_buffer *) component_drawable->drawable, draw_x, draw_y, FALSE, component_drawable->palette_offset);
 }
 
 void entity_movement_handler(ecs_entity *entity, void *component) {
     ecs_component_movement *component_movement = (ecs_component_movement *) component;
     ecs_component_position *component_position = entity->components[ECS_COMPONENT_TYPE_POSITION];
+    ecs_component_drawable *component_drawable = entity->components[ECS_COMPONENT_TYPE_DRAWABLE];
 
     component_position->x += component_movement->hspeed;
     component_position->y += component_movement->vspeed;
 
-    if(component_position->x > (320 - 32) || component_position->x < 0) {
-        if(component_position->x > (320 - 32)) component_position->x = (320 - 32);
+    if(component_position->x > (320 - component_drawable->width) || component_position->x < 0) {
+        if(component_position->x > (320 - component_drawable->width)) component_position->x = (320 - component_drawable->width);
         else if(component_position->x < 0) component_position->x = 0;
         component_movement->hspeed = -(component_movement->hspeed);
     }
 
-    if(component_position->y > (240 - 56) || component_position->y < 0) {
-        if(component_position->y > (240 - 56)) component_position->y = (240 - 56);
+    if(component_position->y > (240 - component_drawable->height) || component_position->y < 0) {
+        if(component_position->y > (240 - component_drawable->height)) component_position->y = (240 - component_drawable->height);
         else if(component_position->y < 0) component_position->y = 0;
         component_movement->vspeed = -(component_movement->vspeed);
     }
@@ -89,6 +90,7 @@ ecs_entity* create_entity(gfx_buffer *drawable) {
     component_drawable->drawable = drawable;
     component_drawable->width = drawable->width;
     component_drawable->height = drawable->height;
+    component_drawable->palette_offset = 16 * (rand() % 16);
     component_movement->hspeed = 1 + rand() % 5;
     component_movement->vspeed = 1 + rand() % 5;
     return entity;
