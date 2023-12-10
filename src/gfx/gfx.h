@@ -18,7 +18,11 @@ enum gfx_tile_states {
     GFX_TILE_STATE_TILE             = 0x01, // screen tile has a tile assigned to it
     GFX_TILE_STATE_SPRITE           = 0x02, // screen tile has a sprite or bitmap drawn to it
     GFX_TILE_STATE_DIRTY_1          = 0x04, // screen tile has been modified with a tile
-    GFX_TILE_STATE_DIRTY_2          = 0x08  // screen tile has been modified with a sprite or bitmap
+    GFX_TILE_STATE_DIRTY_2          = 0x08, // screen tile has been modified with a sprite or bitmap
+    GFX_TILE_OPAQUE_0               = 0x10, // top right corner obscured by opaque tile on layer above
+    GFX_TILE_OPAQUE_1               = 0x20, // bottom right corner obscured by opaque tile on layer above
+    GFX_TILE_OPAQUE_2               = 0x40, // bottom left corner obscured by opaque tile on layer above
+    GFX_TILE_OPAQUE_3               = 0x80  // top left corner obscured by opaque tile on layer above
 };
 
 enum gfx_sprite_commands {
@@ -35,7 +39,7 @@ enum gfx_buffer_flags {
     GFX_BUFFER_FLAG_COMPILED        = 0x02, // buffer contains compiled instructions
     GFX_BUFFER_FLAG_CLIPPING        = 0x04, // buffer supports clipping/has a clipping fallback
     GFX_BUFFER_FLAG_ROW_MAJOR       = 0x08, // planar data is stored in row-major order
-    GFX_BUFFER_FLAG_PALETTE_OFFSET  = 0x016 // compiled instructions can accept a palette offset
+    GFX_BUFFER_FLAG_PALETTE_OFFSET  = 0x10  // compiled instructions can accept a palette offset
 };
 
 typedef struct gfx_buffer {
@@ -79,6 +83,10 @@ typedef struct gfx_screen_state {
     word tile_count;                        // number of tiles total
     byte horz_tiles;                        // number of horizontal tiles
     byte vert_tiles;                        // number of vertical tiles
+    byte horz_tile_offset;                  // current horizontal tile offset
+    byte vert_tile_offset;                  // current vertical tile offset
+    int view_scroll_x;                      // current view scroll horizontal
+    int view_scroll_y;                      // current view scroll vertical
     gfx_tile_state *tile_index;             // main tile index
 } gfx_screen_state;
 
@@ -86,8 +94,6 @@ typedef struct gfx_tilemap {
     word tile_count;                        // number of tiles total
     byte horz_tiles;                        // number of horizontal tiles
     byte vert_tiles;                        // number of vertical tiles
-    byte horz_offset;                       // current horizontal tile offset
-    byte vert_offset;                       // current vertical tile offset
     dword buffer_size;                      // total size of buffer (in bytes)
     byte *buffer;                           // array of bytes that holds the tilemap data
 } gfx_tilemap;
