@@ -133,7 +133,7 @@ struct gfx_screen_state* _init_screen_state(byte horz_tiles, byte vert_tiles) {
     screen_state->tile_index = (gfx_tile_state *) ((byte *) screen_state + sizeof(struct gfx_screen_state));
     memset(screen_state->tile_index, 0, sizeof(struct gfx_tile_state) * tile_count);
 
-    _set_tile_states(screen_state, GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE, FALSE, 0, 0, horz_tiles - 1, vert_tiles - 1);
+    _set_tile_states(screen_state, GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_TILE, FALSE, 0, 0, horz_tiles - 1, vert_tiles - 1);
 
     return screen_state;
 }
@@ -381,7 +381,7 @@ void gfx_set_tile_states_for_sprites(){
         cur_sprite = &sprites_to_draw[i];
         _set_tile_states(
             screen_state_current,
-            GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE,
+            GFX_TILE_STATE_DIRTY,
             FALSE,
             cur_sprite->dest_x / TILE_WIDTH,
             cur_sprite->dest_y / TILE_HEIGHT,
@@ -398,7 +398,7 @@ void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte 
     /* only mark tile as dirty if the tile has changed */
     if(!(tile_state->state & GFX_TILE_STATE_TILE) || tile_state->tile != tile || force) {
         tile_state->tile = tile;
-        tile_state->state |= GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_TILE;
+        tile_state->state |= GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_TILE;
     }
 }
 
@@ -638,7 +638,7 @@ void _gfx_blit_planar_screen() {
     }
 }
 
-void _gfx_blit_dirty_tiles() {
+void _gfx_blit_dirty_tiles(byte current_priority) {
     gfx_tile_state *tile_index = screen_state_current->tile_index;
     byte tile_number;
     dword x, y, i, vga_offset, tile_offset, initial_offset = screen_state_current->current_render_page_offset;
@@ -654,7 +654,7 @@ void _gfx_blit_dirty_tiles() {
     /* TODO: this could be optimized better to use less variables */
     for(i = 0; i < render_tile_count; i++) {
         // skip tile if there is nothing to update
-        if(!(tile_index[i].state & (GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2)))
+        if((!(tile_index[i].state & GFX_TILE_STATE_DIRTY)) || ((tile_index[i].state & GFX_TILE_STATE_PRIORITY) != current_priority))
             continue;
         tile_number = tile_index[i].tile;
         x = (word) (i % render_tile_width) * TILE_WIDTH;
@@ -670,8 +670,8 @@ void _gfx_blit_dirty_tiles() {
         // }
         gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
 
-        // clear tile state once it has been blitted
-        tile_index[i].state &= ~(GFX_TILE_STATE_DIRTY_1 | GFX_TILE_STATE_DIRTY_2 | GFX_TILE_STATE_SPRITE);
+        // clear dirty tile state once it has been blitted
+        tile_index[i].state &= ~GFX_TILE_STATE_DIRTY;
     }
 
     outpw(GC_INDEX + 1, 0x0ff);
@@ -821,13 +821,14 @@ void gfx_render_all() {
     vga_wait_for_retrace();
 
     /* blitting */
-    _gfx_blit_dirty_tiles();
+    _gfx_blit_dirty_tiles(0);
     if(sprites_to_draw_count > 0) {
         gfx_blit_sprites();
         gfx_set_tile_states_for_sprites();
         /* clear buffers once rendering has finished */
         sprites_to_draw_count = 0;
     }
+    _gfx_blit_dirty_tiles(GFX_TILE_STATE_PRIORITY);
 
     /* page flip + scrolling */
     vga_set_offset(screen_state_current->current_render_page_offset + vga_offset_x + vga_offset_y);

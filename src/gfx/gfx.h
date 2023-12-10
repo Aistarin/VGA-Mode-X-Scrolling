@@ -16,9 +16,9 @@ enum gfx_color_depths {
 
 enum gfx_tile_states {
     GFX_TILE_STATE_TILE             = 0x01, // screen tile has a tile assigned to it
-    GFX_TILE_STATE_SPRITE           = 0x02, // screen tile has a sprite or bitmap drawn to it
-    GFX_TILE_STATE_DIRTY_1          = 0x04, // screen tile has been modified with a tile
-    GFX_TILE_STATE_DIRTY_2          = 0x08, // screen tile has been modified with a sprite or bitmap
+    GFX_TILE_STATE_DIRTY            = 0x02, // screen tile has been modified with a tile, sprite, or bitmap
+    GFX_TILE_STATE_PRIORITY         = 0x04, // screen tile should be drawn before (0) or after (1) sprite layer
+    GFX_TILE_STATE_MASKED           = 0x08, // screen tile is masked (has transparent areas)
     GFX_TILE_OPAQUE_0               = 0x10, // top right corner obscured by opaque tile on layer above
     GFX_TILE_OPAQUE_1               = 0x20, // bottom right corner obscured by opaque tile on layer above
     GFX_TILE_OPAQUE_2               = 0x40, // bottom left corner obscured by opaque tile on layer above
