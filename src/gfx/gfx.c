@@ -18,6 +18,7 @@ int view_scroll_y = 0;                  // vertical scroll value
 
 gfx_buffer *gfx_screen_buffer;          // main memory representation of current screen
 gfx_buffer *gfx_tileset_buffer;         // main memory representation of current tileset
+dword *tileset_mask_bitmap;             // bitmap mask of current tileset
 
 gfx_screen_state *screen_state_current; // pointer to current screen state
 gfx_screen_state *screen_state_page_0;  // screen state for VRAM page 0
@@ -147,8 +148,10 @@ struct gfx_tilemap* _init_tilemap(byte horz_tiles, byte vert_tiles) {
     tilemap = (gfx_tilemap *) malloc(bytes_to_allocate);
 
     tilemap->tile_count = tile_count;
+    tilemap->layer_count = 1;
     tilemap->horz_tiles = horz_tiles;
     tilemap->vert_tiles = vert_tiles;
+    tilemap->offsets = NULL;
     tilemap->buffer_size = sizeof(byte) * tile_count;
 
     /* bitmap buffer is memory immediately after main struct */
@@ -564,6 +567,8 @@ void gfx_init() {
 
     /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
     gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE, 0);
+    /* mask bitmap is 1/8th the pixel count of the tilemap, each pixel represented by a bit */
+    tileset_mask_bitmap = malloc((gfx_tileset_buffer->buffer_size >> 3));
 
     /* render tile area should encompass the size of the viewport + 1 tile*/
     render_tile_width = render_page_width / TILE_WIDTH;
@@ -603,7 +608,22 @@ void gfx_load_tileset() {
     word i, x, y, x_current = 0, y_current = 0;
     byte *tileset_buffer = gfx_tileset_buffer->buffer;
     dword tileset_width = gfx_tileset_buffer->width;
-    dword cur_offset;
+    dword tileset_height = gfx_tileset_buffer->height;
+    dword bitmask, bit, cur_offset = 0, bitmask_offset = 0;
+
+    // build bitmask that checks whether or not a pixel is 0-valued (transparent)
+    // NOTE: there's probably a better way to build this, but this should suffice for now
+    while(cur_offset < gfx_tileset_buffer->buffer_size) {
+        bitmask = 0;
+        // NOTE: since this is 32-bit code, we can read in 4 bytes at a time when it
+        // comes to implementing the masking in assembly
+        for(i = 0; i < 32; i++){
+            bitmask |= tileset_buffer[cur_offset++] ? (1 << (31 - i)) : 0;
+        }
+        // circular rotate left 4 bits ahead of time to save us a ROL instruction
+        bitmask = (bitmask << 4 % 32) | (bitmask >> (32 - 4) % 32);
+        tileset_mask_bitmap[bitmask_offset++] = bitmask;
+    }
 
     for(plane = 0; plane < 4; plane++) {
         // select one plane at a time
@@ -641,15 +661,19 @@ void _gfx_blit_planar_screen() {
 void _gfx_blit_dirty_tiles(byte current_priority) {
     gfx_tile_state *tile_index = screen_state_current->tile_index;
     byte tile_number;
-    dword x, y, i, vga_offset, tile_offset, initial_offset = screen_state_current->current_render_page_offset;
+    dword x, y, i, vga_offset, tile_offset, mask_offset, initial_offset = screen_state_current->current_render_page_offset;
     dword initial_tile_offset = (PAGE_WIDTH >> 2) * PAGE_HEIGHT * 2;
 
     /* pixel variable made volatile to prevent the compiler from
        optimizing it out, since value is not actually used */
     volatile byte pixel;
 
-    outpw(SC_INDEX, ((word)0xff << 8) + MAP_MASK);      //select all planes
-    outpw(GC_INDEX, 0x08);                              //set to OR mode
+    //select all planes
+    outp(SC_INDEX, 0x02);
+    // TODO: uncomment this out when ready to split dirty masked tiles into a separate loop
+    // outp(SC_DATA, 0xff);  // lower nibble selects planes to output; upper nibble appears to be ignored
+    //set to OR mode
+    outpw(GC_INDEX, 0x08);
 
     /* TODO: this could be optimized better to use less variables */
     for(i = 0; i < render_tile_count; i++) {
@@ -668,13 +692,19 @@ void _gfx_blit_dirty_tiles(byte current_priority) {
         //     }
         //     vga_offset += PAGE_WIDTH >> 2;
         // }
-        gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
+        if(tile_index[i].state & GFX_TILE_STATE_MASKED) {
+            // NOTE: each 16x16 tile mask is 32 bytes (8 dwords, 256 bits) large
+            mask_offset = 8 * (dword) tile_number;
+            gfx_blit_masked_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset], &tileset_mask_bitmap[mask_offset]);
+        } else {
+            gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
+        }
 
         // clear dirty tile state once it has been blitted
         tile_index[i].state &= ~GFX_TILE_STATE_DIRTY;
     }
 
-    outpw(GC_INDEX + 1, 0x0ff);
+    outpw(GC_INDEX + 1, 0xff);
 }
 
 void _blit_sprite_onto_plane(gfx_sprite_to_draw *sprite, byte plane) {

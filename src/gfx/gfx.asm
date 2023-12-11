@@ -5,6 +5,8 @@ SEGMENT _DATA PUBLIC ALIGN=4 USE32 class=DATA
 
     PAGE_WIDTH      equ 84              ;; page width per plane, 336 / 4
 
+    SC_DATA         equ 0x03C5
+
     GLOBAL _modexvar_active_start
     GLOBAL _modexvar_visible_start
 
@@ -208,6 +210,11 @@ _gfx_blit_16_x_16_tile: FUNCTION
     mov edi, dword [vga_offset]         ;; set destination to where tile will be drawn in VRAM
     mov esi, dword [tile_offset]        ;; set source to where tile is located in VRAM
 
+    ;; TODO: remove this when ready to split dirty masked tiles into a separate loop
+    mov dx, SC_DATA
+    mov al, 0xFF
+    out dx, al
+
     ;; unrolled loop where we latch copy 4 pixels for each movsb (16 in total), incrementing
     ;; esi and edi by the page width to go down into the next row
     movsb
@@ -288,6 +295,246 @@ _gfx_blit_16_x_16_tile: FUNCTION
     movsb
     movsb
     movsb
+    movsb
+
+    popa
+ENDFUNCTION
+
+GLOBAL _gfx_blit_masked_16_x_16_tile
+_gfx_blit_masked_16_x_16_tile: FUNCTION
+    %arg vga_offset:dword, tile_offset:dword, mask_offset:dword
+    pusha
+    cld
+
+    mov edi, dword [vga_offset]         ;; set destination to where tile will be drawn in VRAM
+    mov esi, dword [tile_offset]        ;; set source to where tile is located in VRAM
+    mov ecx, dword [mask_offset]        ;; set source where mask bitmap data is located in main RAM
+
+    mov dx, SC_DATA
+
+    ;; unrolled loop where we latch copy 4 pixels for each movsb (16 in total), incrementing
+    ;; esi and edi by the page width to go down into the next row
+
+    mov eax, [ecx]
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+
+    inc ecx
+    mov eax, [ecx]
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+
+    inc ecx
+    mov eax, [ecx]
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+
+    inc ecx
+    mov eax, [ecx]
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+
+    inc ecx
+    mov eax, [ecx]
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+
+    inc ecx
+    mov eax, [ecx]
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+
+    inc ecx
+    mov eax, [ecx]
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+
+    inc ecx
+    mov eax, [ecx]
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    add edi, PAGE_WIDTH - 4
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
+    movsb
+    rol eax, 4
+    out dx, al
     movsb
 
     popa

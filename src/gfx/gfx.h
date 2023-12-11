@@ -3,8 +3,10 @@
 
 #include "src/common.h"
 
-#define TILE_WIDTH          16              // global tile width (in pixels)
-#define TILE_HEIGHT         16              // global tile height (in pixels)
+#define TILE_WIDTH                      16  // global tile width (in pixels)
+#define TILE_HEIGHT                     16  // global tile height (in pixels)
+#define TILEMAP_CHUNK_WIDTH             16  // tilemap chunk width (in tiles)
+#define TILEMAP_CHUNK_HEIGHT            16  // tilemap chunk height (in tiles)
 
 enum gfx_color_depths {
     GFX_BUFFER_BPP_8,
@@ -92,9 +94,11 @@ typedef struct gfx_screen_state {
 
 typedef struct gfx_tilemap {
     word tile_count;                        // number of tiles total
+    byte layer_count;                       // number of tile layers
     byte horz_tiles;                        // number of horizontal tiles
     byte vert_tiles;                        // number of vertical tiles
     dword buffer_size;                      // total size of buffer (in bytes)
+    word *offsets;                          // memory offsets for layers (size calculated from layer count)
     byte *buffer;                           // array of bytes that holds the tilemap data
 } gfx_tilemap;
 
@@ -120,6 +124,7 @@ extern void gfx_blit_sprite(byte *initial_vga_offset, byte *sprite_offset, byte 
 extern void gfx_blit_clipped_sprite(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte x_min, byte x_max, byte y_min, byte y_max);
 extern void gfx_blit_clipped_sprite_with_palette_offset(byte *initial_vga_offset, byte *sprite_offset, byte sprite_width, byte x_min, byte x_max, byte y_min, byte y_max, byte palette_offset);
 extern void gfx_blit_16_x_16_tile(byte *vga_offset, byte *tile_offset);
+extern void gfx_blit_masked_16_x_16_tile(byte *vga_offset, byte *tile_offset, dword *mask_offset);
 extern void gfx_blit_8_x_8_tile(byte *vga_offset, byte *tile_offset);
 extern void gfx_blit_compiled_planar_sprite_scheme_1(byte *vga_offset, byte *sprite_offset, dword iter);
 extern void gfx_blit_compiled_planar_sprite_scheme_2(byte *vga_offset, byte *sprite_offset, byte *sprite_data_offset, byte palette_offset);
