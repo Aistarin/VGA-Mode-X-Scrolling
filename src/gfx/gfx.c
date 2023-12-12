@@ -609,20 +609,34 @@ void gfx_load_tileset() {
     byte *tileset_buffer = gfx_tileset_buffer->buffer;
     dword tileset_width = gfx_tileset_buffer->width;
     dword tileset_height = gfx_tileset_buffer->height;
-    dword bitmask, bit, cur_offset = 0, bitmask_offset = 0;
+    dword bitmask = 0, bit = 0, cur_offset = 0, bitmask_offset = 0;
 
-    // build bitmask that checks whether or not a pixel is 0-valued (transparent)
-    // NOTE: there's probably a better way to build this, but this should suffice for now
-    while(cur_offset < gfx_tileset_buffer->buffer_size) {
-        bitmask = 0;
-        // NOTE: since this is 32-bit code, we can read in 4 bytes at a time when it
-        // comes to implementing the masking in assembly
-        for(i = 0; i < 32; i++){
-            bitmask |= tileset_buffer[cur_offset++] ? (1 << (31 - i)) : 0;
+    // build planar bitmask that checks whether or not a pixel is 0-valued (transparent)
+    // NOTE: since this is 32-bit code, we can read in 4 bytes at a time when it
+    // comes to implementing the masking in assembly. There's probably a better
+    // way to build this, but this should suffice for now
+    for(i = 0; i < 256; i++) {
+        x_current = (i % 16) * TILE_WIDTH;
+        y_current = (i / 16) * TILE_HEIGHT;
+        for(y = y_current; y < y_current + TILE_HEIGHT; y++) {
+            for(x = x_current; x < x_current + TILE_WIDTH; x += 4) {
+                // each 4-bit nibble represents the value we set the SC_INDEX register
+                // to select the planes to be latch-copied (which contain the
+                // non-transparent pixels)
+                bitmask |= tileset_buffer[(y * tileset_width ) + x] ? (1 << (31 - (bit + 3))) : 0;
+                bitmask |= tileset_buffer[(y * tileset_width ) + x + 1] ? (1 << (31 - (bit + 2))) : 0;
+                bitmask |= tileset_buffer[(y * tileset_width ) + x + 2] ? (1 << (31 - (bit + 1))) : 0;
+                bitmask |= tileset_buffer[(y * tileset_width ) + x + 3] ? (1 << (31 - bit)) : 0;
+                bit += 4;
+                if(bit == 32) {
+                    bit = 0;
+                    // circular rotate left 4 bits ahead of time to save us a ROL instruction
+                    bitmask = (bitmask << 4 % 32) | (bitmask >> (32 - 4) % 32);
+                    tileset_mask_bitmap[bitmask_offset++] = bitmask;
+                    bitmask = 0;
+                }
+            }
         }
-        // circular rotate left 4 bits ahead of time to save us a ROL instruction
-        bitmask = (bitmask << 4 % 32) | (bitmask >> (32 - 4) % 32);
-        tileset_mask_bitmap[bitmask_offset++] = bitmask;
     }
 
     for(plane = 0; plane < 4; plane++) {

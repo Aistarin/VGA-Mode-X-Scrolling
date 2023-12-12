@@ -341,7 +341,7 @@ _gfx_blit_masked_16_x_16_tile: FUNCTION
     out dx, al
     movsb
 
-    inc ecx
+    add ecx, 4
     mov eax, [ecx]
     out dx, al
     add edi, PAGE_WIDTH - 4
@@ -369,7 +369,7 @@ _gfx_blit_masked_16_x_16_tile: FUNCTION
     out dx, al
     movsb
 
-    inc ecx
+    add ecx, 4
     mov eax, [ecx]
     out dx, al
     add edi, PAGE_WIDTH - 4
@@ -397,7 +397,7 @@ _gfx_blit_masked_16_x_16_tile: FUNCTION
     out dx, al
     movsb
 
-    inc ecx
+    add ecx, 4
     mov eax, [ecx]
     out dx, al
     add edi, PAGE_WIDTH - 4
@@ -425,7 +425,7 @@ _gfx_blit_masked_16_x_16_tile: FUNCTION
     out dx, al
     movsb
 
-    inc ecx
+    add ecx, 4
     mov eax, [ecx]
     out dx, al
     add edi, PAGE_WIDTH - 4
@@ -453,7 +453,7 @@ _gfx_blit_masked_16_x_16_tile: FUNCTION
     out dx, al
     movsb
 
-    inc ecx
+    add ecx, 4
     mov eax, [ecx]
     out dx, al
     add edi, PAGE_WIDTH - 4
@@ -481,7 +481,7 @@ _gfx_blit_masked_16_x_16_tile: FUNCTION
     out dx, al
     movsb
 
-    inc ecx
+    add ecx, 4
     mov eax, [ecx]
     out dx, al
     add edi, PAGE_WIDTH - 4
@@ -509,7 +509,7 @@ _gfx_blit_masked_16_x_16_tile: FUNCTION
     out dx, al
     movsb
 
-    inc ecx
+    add ecx, 4
     mov eax, [ecx]
     out dx, al
     add edi, PAGE_WIDTH - 4
