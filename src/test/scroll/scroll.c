@@ -180,7 +180,7 @@ int test_scroll(byte test_mode){
     } else if (test_mode == 0) {
         render_pattern_to_buffer_1(tileset_buffer->buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
     }
-    gfx_load_tileset();
+    gfx_init_tileset();
 
     /* build test tilemap */
     for(i = 0; i < 256; i++){

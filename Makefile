@@ -32,6 +32,11 @@ platform : clean $(OBJ_LIST)
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/platform/platform.c -c -fo=obj/platform.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
+tileconv : clean bitmap.obj file.obj
+	cp res/testtile.bmp build/testtile.bmp
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/utils/tileconv.c -c -fo=obj/tileconv.obj
+	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/tileconv.exe
+
 testasm : clean
 	$(NASM) -g -F dwarf -f elf32 src/test/test.asm -o obj/test.obj
 	ld -m elf_i386 -o build/test obj/test.obj

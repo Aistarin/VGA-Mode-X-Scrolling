@@ -92,6 +92,17 @@ typedef struct gfx_screen_state {
     gfx_tile_state *tile_index;             // main tile index
 } gfx_screen_state;
 
+typedef struct gfx_tileset {
+    word tile_count;                        // number of tiles total
+    byte tile_width;                        // tile width (in pixels)
+    byte tile_height;                       // tile height (in pixels)
+    dword buffer_size;                      // total size of tileset buffer (in bytes)
+    dword mask_bitmap_size;                 // total size of mask bitmap (in bytes)
+    byte *buffer;                           // array of bytes that holds the tileset data
+    byte *mask_bitmap;                      // mask bitmap of tileset
+    byte *palette;                          // array of bytes that holds the palette data (converted to 3-byte RGB)
+} gfx_tileset;
+
 typedef struct gfx_tilemap {
     word tile_count;                        // number of tiles total
     byte layer_count;                       // number of tile layers
@@ -112,10 +123,10 @@ void gfx_set_tile(byte tile, byte x, byte y);
 void gfx_blit_screen_buffer(void);
 void gfx_mirror_page(void);
 void gfx_render_all(void);
-void gfx_load_tileset(void);
+void gfx_init_tileset();
 void gfx_reload_tilemap(byte x_offset, byte y_offset);
 void gfx_draw_bitmap_to_screen(gfx_buffer *bitmap, int draw_x, int draw_y, bool flip_horz, byte palette_offset);
-void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
+// void gfx_draw_planar_sprite_to_planar_screen(gfx_buffer *sprite_bitmap, word x, word y);
 void gfx_load_linear_bitmap_to_planar_bitmap(byte *source_bitmap, byte *dest_bitmap, word width, word height, bool row_major);
 void gfx_set_scroll_offset(word x_offset, word y_offset);
 gfx_tilemap* gfx_get_tilemap_buffer(void);

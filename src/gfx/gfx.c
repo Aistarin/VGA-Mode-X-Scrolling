@@ -602,14 +602,16 @@ void gfx_shutdown() {
     vga_exit_modex();
 }
 
-/* this loads the tileset into the VRAM after the two pages */
-void gfx_load_tileset() {
+/**
+ * given an uncompressed raw 8-bit bitmap buffer that contains the tileset,
+ * this convert
+ **/
+void gfx_init_tileset() {
     byte plane;
     word i, x, y, x_current = 0, y_current = 0;
     byte *tileset_buffer = gfx_tileset_buffer->buffer;
     dword tileset_width = gfx_tileset_buffer->width;
-    dword tileset_height = gfx_tileset_buffer->height;
-    dword bitmask = 0, bit = 0, cur_offset = 0, bitmask_offset = 0;
+    dword bitmask = 0, bit = 0, cur_offset = 0;
 
     // build planar bitmask that checks whether or not a pixel is 0-valued (transparent)
     // NOTE: since this is 32-bit code, we can read in 4 bytes at a time when it
@@ -629,18 +631,19 @@ void gfx_load_tileset() {
                 bitmask |= tileset_buffer[(y * tileset_width ) + x + 3] ? (1 << (31 - bit)) : 0;
                 bit += 4;
                 if(bit == 32) {
-                    bit = 0;
                     // circular rotate left 4 bits ahead of time to save us a ROL instruction
                     bitmask = (bitmask << 4 % 32) | (bitmask >> (32 - 4) % 32);
-                    tileset_mask_bitmap[bitmask_offset++] = bitmask;
+                    tileset_mask_bitmap[cur_offset++] = bitmask;
                     bitmask = 0;
+                    bit = 0;
                 }
             }
         }
     }
 
+    // convert source bitmap to planar format and writes it to VRAM
+    // one plane at a time
     for(plane = 0; plane < 4; plane++) {
-        // select one plane at a time
         outp(SC_INDEX, MAP_MASK);
         outp(SC_DATA, 1 << plane);
         cur_offset = (PAGE_WIDTH >> 2) * PAGE_HEIGHT * 2;

@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 
     load_bmp_to_buffer("testtile.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette, 0);
     vga_set_palette(palette, 0, 255);
-    gfx_load_tileset();
+    gfx_init_tileset();
 
     read_bytes_from_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
     gfx_reload_tilemap(0, 0);

@@ -1,4 +1,4 @@
-%include "src/util.asm"
+%include "src/utils/util.asm"
 
 SEGMENT _DATA PUBLIC ALIGN=4 USE32 class=DATA
     VGA_START       equ 0xA0000

@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
      */
     tileset_buffer = gfx_get_tileset_buffer();
     render_pattern_to_buffer_1(tileset_buffer->buffer, TILE_WIDTH, TILE_HEIGHT, tileset_buffer->width, tileset_buffer->height);
-    gfx_load_tileset();
+    gfx_init_tileset();
 
     /*
      * the gfx system also allocates 65536 bytes for a 256x256 tile
