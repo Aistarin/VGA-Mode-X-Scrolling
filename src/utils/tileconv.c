@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     memset(tileset_data->buffer, 0, tileset_data->buffer_size);
     tileset_data->mask_bitmap = (byte *) tileset_data->buffer + tileset_data->buffer_size;
     memset(tileset_data->mask_bitmap, 0, tileset_data->mask_bitmap_size);
-    tileset_data->palette = (byte *) tileset_data->mask_bitmap + (sizeof(byte) * 256 * 3);
+    tileset_data->palette = (byte *) tileset_data->mask_bitmap + tileset_data->mask_bitmap_size;
     memset(tileset_data->palette, 0, sizeof(byte) * 256 * 3);
 
     // allocate temp buffer and load raw tile bitmap into it;
