@@ -409,6 +409,7 @@ void _set_tile_for_screen_state(gfx_screen_state *screen_state, byte tile, byte 
     if(!(tile_state->state & GFX_TILE_STATE_TILE) || tile_state->tile != tile || force) {
         tile_state->tile = tile;
         tile_state->state |= GFX_TILE_STATE_DIRTY | GFX_TILE_STATE_TILE;
+        tile_state->state &= ~GFX_TILE_STATE_PRIORITY;  // TODO: this should be set/unset from tilemap data
     }
 }
 
@@ -698,10 +699,8 @@ void _gfx_blit_dirty_tiles(byte current_priority) {
                 gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
             }
 
-            if((tile_index[i].state & GFX_TILE_STATE_PRIORITY) == current_priority) {
-                // clear dirty tile state once it has been blitted
-                tile_index[i].state &= ~GFX_TILE_STATE_DIRTY;
-            }
+            // clear dirty tile state once it has been blitted
+            tile_index[i].state &= ~GFX_TILE_STATE_DIRTY;
         }
     }
 
@@ -854,6 +853,7 @@ void gfx_render_all() {
     /* blitting */
     _gfx_blit_dirty_tiles(0);    
     gfx_blit_sprites();
+    gfx_set_tile_states_for_sprites();
     _gfx_blit_dirty_tiles(GFX_TILE_STATE_PRIORITY);
     gfx_set_tile_states_for_sprites();
 
