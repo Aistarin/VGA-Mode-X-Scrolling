@@ -20,14 +20,14 @@ tile : clean $(OBJ_LIST) $(TEST_OBJ_LIST)
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
 map : clean $(OBJ_LIST)
-	cp res/testtile.bmp build/testtile.bmp
+	cp res/testtile.tle build/testtile.tle
 	cp res/test.map build/test.map
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/map.c -c -fo=obj/map.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe
 
 platform : clean $(OBJ_LIST)
 	cp res/jodi-spr.bmp build/jodi-spr.bmp
-	cp res/testtile.bmp build/testtile.bmp
+	cp res/testtile.tle build/testtile.tle
 	cp res/test.map build/test.map
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) src/test/platform/platform.c -c -fo=obj/platform.obj
 	wcl386 -zdp -wcd=138 -ecc -4s -mf -fp3 -za -bt=dos -l=$(DOS_EXTENDER) obj/*.obj -fe=build/game.exe

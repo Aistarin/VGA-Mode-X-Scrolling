@@ -16,7 +16,7 @@ int tile_cursor_x_rel_max = (PAGE_WIDTH / TILE_WIDTH) - 2;
 int tile_cursor_y_rel_max = ((PAGE_HEIGHT / TILE_HEIGHT) - 3);
 byte tile_cursor_index = 1;
 byte tile_tilemap_index = 0;
-gfx_buffer *tileset_buffer;
+gfx_tileset *tileset;
 gfx_tilemap *tilemap_buffer;
 
 byte get_tile_at_pos(int x, int y) {
@@ -73,19 +73,18 @@ void move_tile_cursor(int x_delta, int y_delta) {
 }
 
 int main(int argc, char *argv[]) {
-    byte palette[256*3];
     bool exit_program = FALSE;
     bool tile_blink = FALSE;
     int tile_blink_timer = 0;
 
     gfx_init();
 
-    tileset_buffer = gfx_get_tileset_buffer();
-    tilemap_buffer = gfx_get_tilemap_buffer();
-    load_bmp_to_buffer("testtile.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette, 0);
-    vga_set_palette(palette, 0, 255);
+    tileset = gfx_get_tileset();
+    read_bytes_from_file("testtile.tle", (byte *) tileset, gfx_get_tileset_data_size());
     gfx_init_tileset();
+    vga_set_palette(tileset->palette, 0, 255);
 
+    tilemap_buffer = gfx_get_tilemap_buffer();
     read_bytes_from_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
     tile_tilemap_index = tilemap_buffer->buffer[0];
     gfx_reload_tilemap(tile_cursor_x, tile_cursor_y);

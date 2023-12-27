@@ -18,7 +18,7 @@ byte scratch_buffer[0xFFFF];
 int view_pos_x = 0;
 int view_pos_y = 0;
 
-gfx_buffer *tileset_buffer;
+gfx_tileset *tileset;
 gfx_tilemap *tilemap_buffer;
 
 void* load_sprite(char *filename, word sprite_width, word sprite_height, bool compiled, byte palette_offset) {
@@ -95,6 +95,10 @@ int main(int argc, char *argv[]) {
     ecs_register_component(ECS_COMPONENT_TYPE_PHYSICS, sizeof(ecs_component_physics), ENTITY_MAX, entity_physics_handler, FALSE);
     ecs_register_component(ECS_COMPONENT_TYPE_DRAWABLE, sizeof(ecs_component_drawable), ENTITY_MAX, entity_draw_handler, TRUE);
 
+    tileset = gfx_get_tileset();
+    read_bytes_from_file("testtile.tle", (byte *) tileset, gfx_get_tileset_data_size());
+    gfx_init_tileset();
+
     drawable = load_sprite("jodi-spr.bmp", 32, 56, TRUE, 16);
 
     memcpy(&palette[32 * 3], &palette[16 * 3], 16 * 3);
@@ -106,13 +110,11 @@ int main(int argc, char *argv[]) {
     palette[(32 * 3) + (14 * 3) + 1] = 58 >> 2;
     palette[(32 * 3) + (14 * 3) + 2] = 146 >> 2;
 
-    tileset_buffer = gfx_get_tileset_buffer();
-    tilemap_buffer = gfx_get_tilemap_buffer();
+    memcpy(palette, tileset->palette, 16 * 3);
 
-    load_bmp_to_buffer("testtile.bmp", tileset_buffer->buffer, tileset_buffer->width, tileset_buffer->height, palette, 0);
     vga_set_palette(palette, 0, 255);
-    gfx_init_tileset();
 
+    tilemap_buffer = gfx_get_tilemap_buffer();
     read_bytes_from_file("test.map", tilemap_buffer->buffer, tilemap_buffer->buffer_size);
     gfx_reload_tilemap(0, 0);
 

@@ -18,7 +18,8 @@ int view_scroll_y = 0;                  // vertical scroll value
 
 gfx_buffer *gfx_screen_buffer;          // main memory representation of current screen
 gfx_buffer *gfx_tileset_buffer;         // main memory representation of current tileset
-dword *tileset_mask_bitmap;             // bitmap mask of current tileset
+gfx_tileset *tileset;                   // tileset + mask + palette data
+dword tileset_data_size;                // tileset data size
 
 gfx_screen_state *screen_state_current; // pointer to current screen state
 gfx_screen_state *screen_state_page_0;  // screen state for VRAM page 0
@@ -33,6 +34,8 @@ byte x_offset_clipping_left[256][4];
 byte x_offset_clipping_right[256][4];
 byte plane_offset_clipping_left[256][4];
 byte plane_offset_clipping_right[256][4];
+
+byte *palette[256 * 3];                 // global palette data
 
 int frame_number = 0;
 
@@ -189,8 +192,12 @@ gfx_buffer* gfx_get_screen_buffer() {
  * Returns pointer to the main memory buffer representation
  * of the currently loaded tileset
  **/
-gfx_buffer* gfx_get_tileset_buffer() {
-    return gfx_tileset_buffer;
+gfx_tileset* gfx_get_tileset() {
+    return tileset;
+}
+
+dword gfx_get_tileset_data_size() {
+    return tileset_data_size;
 }
 
 /**
@@ -557,6 +564,7 @@ void gfx_blit_clipped_planar_sprite(gfx_sprite_to_draw *sprite, byte *initial_vg
  **/
 void gfx_init() {
     word i;
+    dword tileset_buffer_size = TILE_WIDTH * TILE_HEIGHT * 256;
 
     vga_init_modex();
     vga_wait_for_retrace();
@@ -567,8 +575,14 @@ void gfx_init() {
 
     /* tile atlas consists of 16x16 tiles, totalling 256 unique tiles */
     gfx_tileset_buffer = gfx_create_empty_buffer(GFX_BUFFER_BPP_8, TILE_WIDTH * 16, TILE_HEIGHT * 16, FALSE, 0);
-    /* mask bitmap is 1/8th the pixel count of the tilemap, each pixel represented by a bit */
-    tileset_mask_bitmap = malloc((gfx_tileset_buffer->buffer_size >> 3));
+
+    tileset_data_size = sizeof(struct gfx_tileset)  // data structure itself
+        + (tileset_buffer_size * sizeof(byte))  // size of tileset data
+        + ((tileset_buffer_size >> 3) * sizeof(byte))  // size of mask bitmap (1/8th of size of tileset data)
+        + (sizeof(byte) * 256 * 3);  // size of palette data
+
+    // given calculated size, allocate tileset data
+    tileset = (gfx_tileset *) malloc(tileset_data_size);
 
     /* render tile area should encompass the size of the viewport + 1 tile*/
     render_tile_width = render_page_width / TILE_WIDTH;
@@ -603,58 +617,29 @@ void gfx_shutdown() {
 }
 
 /**
- * given an uncompressed raw 8-bit bitmap buffer that contains the tileset,
- * this convert
+ * initialize tileset struct and load planar tileset data into VRAM
  **/
 void gfx_init_tileset() {
     byte plane;
-    word i, x, y, x_current = 0, y_current = 0;
-    byte *tileset_buffer = gfx_tileset_buffer->buffer;
-    dword tileset_width = gfx_tileset_buffer->width;
-    dword bitmask = 0, bit = 0, cur_offset = 0;
+    word i;
+    dword vga_offset, cur_offset, tile_size = TILE_WIDTH * TILE_HEIGHT;
 
-    // build planar bitmask that checks whether or not a pixel is 0-valued (transparent)
-    // NOTE: since this is 32-bit code, we can read in 4 bytes at a time when it
-    // comes to implementing the masking in assembly. There's probably a better
-    // way to build this, but this should suffice for now
-    for(i = 0; i < 256; i++) {
-        x_current = (i % 16) * TILE_WIDTH;
-        y_current = (i / 16) * TILE_HEIGHT;
-        for(y = y_current; y < y_current + TILE_HEIGHT; y++) {
-            for(x = x_current; x < x_current + TILE_WIDTH; x += 4) {
-                // each 4-bit nibble represents the value we set the SC_INDEX register
-                // to select the planes to be latch-copied (which contain the
-                // non-transparent pixels)
-                bitmask |= tileset_buffer[(y * tileset_width ) + x] ? (1 << (31 - (bit + 3))) : 0;
-                bitmask |= tileset_buffer[(y * tileset_width ) + x + 1] ? (1 << (31 - (bit + 2))) : 0;
-                bitmask |= tileset_buffer[(y * tileset_width ) + x + 2] ? (1 << (31 - (bit + 1))) : 0;
-                bitmask |= tileset_buffer[(y * tileset_width ) + x + 3] ? (1 << (31 - bit)) : 0;
-                bit += 4;
-                if(bit == 32) {
-                    // circular rotate left 4 bits ahead of time to save us a ROL instruction
-                    bitmask = (bitmask << 4 % 32) | (bitmask >> (32 - 4) % 32);
-                    tileset_mask_bitmap[cur_offset++] = bitmask;
-                    bitmask = 0;
-                    bit = 0;
-                }
-            }
-        }
-    }
+    /* first we need to set the pointers to the various buffers */
+    tileset->buffer = (byte *) tileset + sizeof(struct gfx_tileset);
+    tileset->mask_bitmap = (byte *) tileset->buffer + tileset->buffer_size;
+    tileset->palette = (byte *) tileset->mask_bitmap + tileset->mask_bitmap_size;
 
     // convert source bitmap to planar format and writes it to VRAM
     // one plane at a time
     for(plane = 0; plane < 4; plane++) {
         outp(SC_INDEX, MAP_MASK);
         outp(SC_DATA, 1 << plane);
-        cur_offset = (PAGE_WIDTH >> 2) * PAGE_HEIGHT * 2;
+        vga_offset = (PAGE_WIDTH >> 2) * PAGE_HEIGHT * 2;
+        cur_offset = (tile_size >> 2) * plane;
         for(i = 0; i < 256; i++) {
-            x_current = ((i % 16) * TILE_WIDTH) + plane;
-            y_current = (i / 16) * TILE_HEIGHT;
-            for(y = y_current; y < y_current + TILE_HEIGHT; y++) {
-                for(x = x_current; x < x_current + TILE_WIDTH; x += 4) {
-                    VGA[cur_offset++] = tileset_buffer[(y * tileset_width ) + x];
-                }
-            }
+            memcpy(&VGA[vga_offset], &tileset->buffer[cur_offset], tile_size >> 2);
+            vga_offset += tile_size >> 2;
+            cur_offset += tile_size;
         }
     }
 }
@@ -680,6 +665,7 @@ void _gfx_blit_dirty_tiles(byte current_priority) {
     byte tile_number;
     dword x, y, i, vga_offset, tile_offset, mask_offset, initial_offset = screen_state_current->current_render_page_offset;
     dword initial_tile_offset = (PAGE_WIDTH >> 2) * PAGE_HEIGHT * 2;
+    dword *tileset_mask_bitmap = (dword *) tileset->mask_bitmap;
 
     /* pixel variable made volatile to prevent the compiler from
        optimizing it out, since value is not actually used */
