@@ -74,6 +74,9 @@ timer.obj :
 run :
 	$(DOSBOX) -c "mount c ./build" -c "c:" -c "game.exe > test.log" -c "exit"
 
+tileconv-run :
+	$(DOSBOX) -c "mount c ./build" -c "c:" -c "tileconv.exe testtile.bmp 16 16 testtile.tle > test.log" -c "exit"
+
 send :
 	kermit -l $(SERIAL_PORT) -b $(SERIAL_SPEED) -i -s build/game.exe
 

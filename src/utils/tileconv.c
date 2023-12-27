@@ -1,6 +1,7 @@
 #include "src/common.h"
 #include "src/gfx/gfx.h"
 #include "src/io/bitmap.h"
+#include "src/io/file.h"
 #include <conio.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,25 +23,27 @@ byte *buffer;                           // bitmap that will hold data loaded fro
  */
 void build_mask_bitmap() {
     word i, x, y, x_current = 0, y_current = 0;
-    dword bitmask = 0, bit = 0, cur_offset = 0;
+    dword bitmask = 0, bit = 0, cur_offset = 0, buffer_offset;
+    dword *mask_bitmap = (dword *) tileset_data->mask_bitmap;
 
     for(i = 0; i < 256; i++) {
         x_current = (i % 16) * tile_width;
         y_current = (i / 16) * tile_height;
         for(y = y_current; y < y_current + tile_height; y++) {
             for(x = x_current; x < x_current + tile_width; x += 4) {
+                buffer_offset = (y * tileset_width ) + x;
                 // each 4-bit nibble represents the value we set the SC_INDEX register
                 // to select the planes to be latch-copied (which contain the
                 // non-transparent pixels)
-                bitmask |= buffer[(y * tileset_width ) + x] ? (1 << (31 - (bit + 3))) : 0;
-                bitmask |= buffer[(y * tileset_width ) + x + 1] ? (1 << (31 - (bit + 2))) : 0;
-                bitmask |= buffer[(y * tileset_width ) + x + 2] ? (1 << (31 - (bit + 1))) : 0;
-                bitmask |= buffer[(y * tileset_width ) + x + 3] ? (1 << (31 - bit)) : 0;
+                bitmask |= buffer[buffer_offset] ? (1 << (31 - (bit + 3))) : 0;
+                bitmask |= buffer[buffer_offset + 1] ? (1 << (31 - (bit + 2))) : 0;
+                bitmask |= buffer[buffer_offset + 2] ? (1 << (31 - (bit + 1))) : 0;
+                bitmask |= buffer[buffer_offset + 3] ? (1 << (31 - bit)) : 0;
                 bit += 4;
                 if(bit == 32) {
                     // circular rotate left 4 bits ahead of time to save us a ROL instruction
                     bitmask = (bitmask << 4 % 32) | (bitmask >> (32 - 4) % 32);
-                    tileset_data->mask_bitmap[cur_offset++] = bitmask;
+                    mask_bitmap[cur_offset++] = bitmask;
                     bitmask = 0;
                     bit = 0;
                 }
@@ -54,7 +57,7 @@ void build_mask_bitmap() {
  */
 void build_planar_bitmap() {
     word i, x, y, x_current = 0, y_current = 0;
-    dword cur_offset = 0;
+    dword cur_offset = 0, buffer_offset;
 
     for(i = 0; i < 256; i++) {
         x_current = (i % 16) * tile_width;
@@ -62,14 +65,11 @@ void build_planar_bitmap() {
         cur_offset = tile_width * tile_height * i;
         for(y = y_current; y < y_current + tile_height; y++) {
             for(x = x_current; x < x_current + tile_width; x += 4) {
-                // tileset_data->buffer[cur_offset] = buffer[(y * tileset_width ) + x];
-                // tileset_data->buffer[cur_offset + ((tile_width * tile_height) >> 2)] = buffer[(y * tileset_width ) + x + 1];
-                // tileset_data->buffer[cur_offset + (((tile_width * tile_height) >> 2) * 2)] = buffer[(y * tileset_width ) + x + 2];
-                // tileset_data->buffer[cur_offset + (((tile_width * tile_height) >> 2) * 3)] = buffer[(y * tileset_width ) + x + 3];
-                tileset_data->buffer[cur_offset] = 0;
-                tileset_data->buffer[cur_offset + ((tile_width * tile_height) >> 2)] = 1;
-                tileset_data->buffer[cur_offset + (((tile_width * tile_height) >> 2) * 2)] = 2;
-                tileset_data->buffer[cur_offset + (((tile_width * tile_height) >> 2) * 3)] = 3;
+                buffer_offset = (y * tileset_width ) + x;
+                tileset_data->buffer[cur_offset] = buffer[buffer_offset];
+                tileset_data->buffer[cur_offset + ((tile_width * tile_height) >> 2)] = buffer[buffer_offset + 1];
+                tileset_data->buffer[cur_offset + (((tile_width * tile_height) >> 2) * 2)] = buffer[buffer_offset + 2];
+                tileset_data->buffer[cur_offset + (((tile_width * tile_height) >> 2) * 3)] = buffer[buffer_offset + 3];
                 cur_offset++;
             }
         }
@@ -92,13 +92,15 @@ int main(int argc, char *argv[]) {
         + ((tileset_buffer_size >> 3) * sizeof(byte))  // size of mask bitmap (1/8th of size of tileset data)
         + (sizeof(byte) * 256 * 3);  // size of palette data
 
-    printf("Calculated tileset data size: %d bytes", tileset_data_size);
+    printf("Calculated tileset data size: %d bytes\n", tileset_data_size);
 
     tileset_data = (gfx_tileset *) malloc(tileset_data_size);
 
     tileset_data->tile_count = 256;
     tileset_data->tile_width = tile_width;
     tileset_data->tile_height = tile_height;
+    tileset_data->tileset_width = tileset_width;
+    tileset_data->tileset_height = tileset_height;
     tileset_data->buffer_size = tileset_buffer_size;
     tileset_data->mask_bitmap_size = tileset_buffer_size >> 3;
 
@@ -112,16 +114,16 @@ int main(int argc, char *argv[]) {
 
     // allocate temp buffer and load raw tile bitmap into it;
     buffer = malloc(tileset_buffer_size * sizeof(byte));
-    load_bmp_to_buffer(filename, buffer, (word) tile_width, (word) tile_height, tileset_data->palette, 0);
+    load_bmp_to_buffer(filename, buffer, (word) tileset_width, (word) tileset_height, tileset_data->palette, 0);
 
     // build the data
     build_mask_bitmap();
     build_planar_bitmap();
 
     // clear the pointers since they do not need to be saved
-    // tileset_data->buffer = NULL;
-    // tileset_data->mask_bitmap = NULL;
-    // tileset_data->palette = NULL;
+    tileset_data->buffer = NULL;
+    tileset_data->mask_bitmap = NULL;
+    tileset_data->palette = NULL;
 
     // save to file
     write_bytes_to_file(filename_to_save, (byte *) tileset_data, tileset_data_size);

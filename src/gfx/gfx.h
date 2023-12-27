@@ -96,6 +96,8 @@ typedef struct gfx_tileset {
     word tile_count;                        // number of tiles total
     byte tile_width;                        // tile width (in pixels)
     byte tile_height;                       // tile height (in pixels)
+    word tileset_width;                     // tileset width (in pixels)
+    word tileset_height;                    // tileset height (in pixels)
     dword buffer_size;                      // total size of tileset buffer (in bytes)
     dword mask_bitmap_size;                 // total size of mask bitmap (in bytes)
     byte *buffer;                           // array of bytes that holds the tileset data
