@@ -681,30 +681,28 @@ void _gfx_blit_dirty_tiles(byte current_priority) {
     /* TODO: this could be optimized better to use less variables */
     for(i = 0; i < render_tile_count; i++) {
         // skip tile if there is nothing to update
-        if((!(tile_index[i].state & GFX_TILE_STATE_DIRTY)) || ((tile_index[i].state & GFX_TILE_STATE_PRIORITY) != current_priority))
+        if(!(tile_index[i].state & GFX_TILE_STATE_DIRTY))
             continue;
-        tile_number = tile_index[i].tile;
-        x = (word) (i % render_tile_width) * TILE_WIDTH;
-        y = (word) (i / render_tile_width) * TILE_HEIGHT;
-        vga_offset = ((y * PAGE_WIDTH + x) >> 2) + initial_offset;
-        tile_offset = initial_tile_offset + ((TILE_HEIGHT) * (TILE_WIDTH >> 2) * tile_number);
-        // for(y = 0; y < TILE_HEIGHT; y++) {
-        //     for(x = 0; x < TILE_WIDTH >> 2; x++) {
-        //         pixel = VGA[tile_offset++];             //read pixel to load all the latches
-        //         VGA[vga_offset + x] = 0;                //write four pixels in parallel
-        //     }
-        //     vga_offset += PAGE_WIDTH >> 2;
-        // }
-        if(tile_index[i].state & GFX_TILE_STATE_MASKED) {
-            // NOTE: each 16x16 tile mask is 32 bytes (8 dwords, 256 bits) large
-            mask_offset = 8 * (dword) tile_number;
-            gfx_blit_masked_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset], &tileset_mask_bitmap[mask_offset]);
-        } else {
-            gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
-        }
+        else if((tile_index[i].state & GFX_TILE_STATE_PRIORITY) == current_priority || (tile_index[i].state & GFX_TILE_STATE_MASKED)) {
+            tile_number = tile_index[i].tile;
+            x = (word) (i % render_tile_width) * TILE_WIDTH;
+            y = (word) (i / render_tile_width) * TILE_HEIGHT;
+            vga_offset = ((y * PAGE_WIDTH + x) >> 2) + initial_offset;
+            tile_offset = initial_tile_offset + ((TILE_HEIGHT) * (TILE_WIDTH >> 2) * tile_number);
+            // only high priority tiles can be drawn masked
+            if((tile_index[i].state & GFX_TILE_STATE_MASKED) && current_priority) {
+                // NOTE: each 16x16 tile mask is 32 bytes (8 dwords, 256 bits) large
+                mask_offset = 8 * (dword) tile_number;
+                gfx_blit_masked_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset], &tileset_mask_bitmap[mask_offset]);
+            } else {
+                gfx_blit_16_x_16_tile(&VGA[vga_offset], &VGA[tile_offset]);
+            }
 
-        // clear dirty tile state once it has been blitted
-        tile_index[i].state &= ~GFX_TILE_STATE_DIRTY;
+            if((tile_index[i].state & GFX_TILE_STATE_PRIORITY) == current_priority) {
+                // clear dirty tile state once it has been blitted
+                tile_index[i].state &= ~GFX_TILE_STATE_DIRTY;
+            }
+        }
     }
 
     outpw(GC_INDEX + 1, 0xff);
@@ -854,18 +852,17 @@ void gfx_render_all() {
     vga_wait_for_retrace();
 
     /* blitting */
-    _gfx_blit_dirty_tiles(0);
-    if(sprites_to_draw_count > 0) {
-        gfx_blit_sprites();
-        gfx_set_tile_states_for_sprites();
-        /* clear buffers once rendering has finished */
-        sprites_to_draw_count = 0;
-    }
+    _gfx_blit_dirty_tiles(0);    
+    gfx_blit_sprites();
     _gfx_blit_dirty_tiles(GFX_TILE_STATE_PRIORITY);
+    gfx_set_tile_states_for_sprites();
 
     /* page flip + scrolling */
     vga_set_offset(screen_state_current->current_render_page_offset + vga_offset_x + vga_offset_y);
     vga_set_horizontal_pan((byte) screen_state_current->view_scroll_x);
+
+    /* clear buffers once rendering has finished */
+    sprites_to_draw_count = 0;
 
     current_render_page = 1 - current_render_page;
     screen_state_current = current_render_page ? screen_state_page_1 : screen_state_page_0;
